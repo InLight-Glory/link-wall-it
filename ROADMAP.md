@@ -9,8 +9,7 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 *Goal: To build the foundational logic and data structures of the application.*
 
 - [✅] **Database:** Design and implement the JSON database schema and core read/write functions.
-- [✅] **Core Logic (Buildings):** Implement full CRUD functionality for Buildings.
-- [🔄] **Core Logic (Sides & Walls):** Implement CRUD for Sides and Walls.
+- [✅] **Core Logic (All Types):** Implement full CRUD functionality for Buildings, Sides, Walls, and Links.
 - [✅] **File Structure:** Set up the initial project directory and file structure.
 
 ---
@@ -19,8 +18,8 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 
 *Goal: To build the user interfaces for both administrators and public visitors.*
 
-- [🔄] **Admin Dashboard:** Create a secure, full-featured dashboard for managing all content.
-- [🔄] **Public Views:** Develop the dynamic rendering for all public-facing pages (Buildings, Sides, Walls).
+- [✅] **Admin Dashboard:** Create a secure, full-featured dashboard for managing all content.
+- [✅] **Public Views:** Develop the dynamic rendering for all public-facing pages (Buildings, Sides, Walls).
 - [📋] **Image Handling:** Implement image upload, storage, and management.
 
 ---
@@ -40,7 +39,7 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 
 *Goal: To polish the application, write comprehensive documentation, and prepare for release.*
 
-- [📋] **Testing:** Conduct thorough functional, security, and usability testing.
+- [🔄] **Testing:** Conduct thorough functional, security, and usability testing.
 - [🔄] **Documentation:** Write developer guides and a user manual.
 - [📋] **UI/UX Refinement:** Polish the user interface based on testing feedback.
 - [📋] **Release Packaging:** Prepare the final, distributable package.
