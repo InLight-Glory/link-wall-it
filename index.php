@@ -1,20 +1,16 @@
 <?php
 // public/index.php
 
-// Set the error reporting level for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Include the core functions file
 require_once __DIR__ . '/app/core/functions.php';
 
-// --- Data Retrieval ---
 $db = get_db();
 $settings = $db['settings'] ?? [];
 $site_title = $settings['site_title'] ?? 'Link-Wall-It';
 $site_description = $settings['site_description'] ?? 'Your personal link wall.';
 
-// Get all buildings for display
 $buildings = get_all_buildings();
 
 ?>
@@ -60,6 +56,7 @@ $buildings = get_all_buildings();
         </header>
 
         <main>
+            <h2>Our Buildings</h2>
             <?php if (empty($buildings)): ?>
                 <div class="no-buildings">
                     <p>No buildings have been set up yet. Please check back later.</p>
@@ -68,8 +65,7 @@ $buildings = get_all_buildings();
                 <div class="building-grid">
                     <?php foreach ($buildings as $building): ?>
                         <div class="building-card">
-                            <!-- In the future, this will link to a page showing the building's sides -->
-                            <h2><a href="#"><?= htmlspecialchars($building['name']) ?></a></h2>
+                            <h2><a href="building.php?id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a></h2>
                         </div>
                     <?php endforeach; ?>
                 </div>

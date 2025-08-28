@@ -136,7 +136,8 @@ if(isset($_GET['delete']) && $_GET['delete'] == 'success') {
                                 <small>(ID: <?= htmlspecialchars($building['id']) ?>)</small>
                             </span>
                             <span class="building-actions">
-                                <a href="index.php?action=edit&id=<?= htmlspecialchars($building['id']) ?>">Edit</a>
+                                <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>">Manage Sides</a>
+                                <a href="index.php?action=edit&id=<?= htmlspecialchars($building['id']) ?>">Edit Name</a>
                                 <a href="index.php?action=delete&id=<?= htmlspecialchars($building['id']) ?>" class="delete" onclick="return confirm('Are you sure you want to delete this building and all its contents?');">Delete</a>
                             </span>
                         <?php endif; ?>

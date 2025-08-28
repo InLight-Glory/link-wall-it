@@ -9,5 +9,8 @@
             "password_hash": ""
         }
     ],
-    "buildings": []
+    "buildings": [],
+    "sides": [],
+    "walls": [],
+    "links": []
 }
