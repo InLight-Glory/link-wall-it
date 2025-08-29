@@ -1,23 +1,20 @@
 # 🎯 What's Next?
 
-This file tracks the immediate development focus. It's a snapshot of what's currently being worked on.
+This file tracks the immediate development focus. With the core logic and main security features now in place, our next major goal is to implement the features from **Phase 4: Monetization, Sharing & Installation**.
 
-## Current Focus: Completing Phase 1 Core Logic
+## Current Focus: Phase 4 Implementation
 
-Our immediate priority is to finish the core content architecture. This involves building out the logic for the remaining content types.
+Our priorities for this phase are:
 
-- **Implement "Sides" Logic:**
-  - Create CRUD functions for Sides (max 4 per Building).
-  - Update the Admin Dashboard to manage Sides within a Building.
-  - Create a public view for a Side.
+- **Stripe Integration:**
+  - Allow the admin to save their Stripe API keys securely.
+  - Implement a "Pay to Access" feature for individual Walls.
+  - Integrate Stripe.js/Elements for secure payment processing on the public-facing pages.
 
-- **Implement "Walls" Logic:**
-  - Create CRUD functions for Walls (the lists of links).
-  - Update the Admin Dashboard to manage Walls within a Side.
-  - Create a public view for a Wall.
+- **Sharing Tools:**
+  - Implement "Share" buttons that copy the direct URL for a Wall or Side.
+  - Integrate with common social media sharing APIs (e.g., Twitter, Facebook).
 
-- **Implement "Links" Logic:**
-  - Create CRUD functions for individual links within a Wall.
-  - Update the Admin Dashboard to manage links.
-
-Once these foundational elements are complete, we will move on to the more advanced features in Phase 2, such as image uploads and a more robust admin UI.
+- **Installation Wizard:**
+  - Begin development of a user-friendly, guided installation script to simplify the setup process for new users.
+  - This wizard will handle server requirement checks, admin account creation, and initial database setup.

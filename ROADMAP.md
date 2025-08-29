@@ -30,7 +30,6 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 
 - [✅] **Encryption:** Implement data encryption mechanisms.
 - [✅] **Access Control:** Enhance features for blocking unauthorized views.
-- [📋] **Stability:** Focus on overall application stability and hardening.
 
 ---
 
@@ -52,4 +51,5 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 - [🔄] **Testing:** Conduct thorough functional, security, and usability testing.
 - [🔄] **Documentation:** Write developer guides and a user manual.
 - [📋] **UI/UX Refinement:** Polish the user interface based on testing feedback.
+- [📋] **Stability:** Focus on overall application stability and hardening.
 - [📋] **Release Packaging:** Prepare the final, distributable package.
