@@ -29,7 +29,7 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 *Goal: To implement robust security measures for the application.*
 
 - [✅] **Encryption:** Implement data encryption mechanisms.
-- [📋] **Access Control:** Enhance features for blocking unauthorized views.
+- [✅] **Access Control:** Enhance features for blocking unauthorized views.
 - [📋] **Stability:** Focus on overall application stability and hardening.
 
 ---
