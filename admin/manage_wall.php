@@ -70,16 +70,33 @@ function handle_image_upload($file_input_name) {
 // --- Form Handling ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // Handle 'Update Password'
-    if (isset($_POST['update_password'])) {
-        $new_password = $_POST['wall_password'] ?? '';
-        // Add confirmation logic if needed, for now, we'll just set it.
-        if (update_wall_password($wall_id, $new_password)) {
-            $success_message = 'Wall password updated successfully!';
-            // Refresh wall data to show new status
-            $wall = get_wall($wall_id);
+    // Handle 'Update Access Control'
+    if (isset($_POST['update_access'])) {
+        $access_type = $_POST['access_type'] ?? 'public';
+        $access_value = null;
+
+        if ($access_type === 'password') {
+            $access_value = $_POST['access_password'] ?? '';
+            if (empty($access_value)) {
+                // If password is empty, treat as making it public
+                $access_type = 'public';
+            }
+        } elseif ($access_type === 'codelist') {
+            $codelist_str = $_POST['access_codelist'] ?? '';
+            // Split by comma, and also handle newlines
+            $access_value = preg_split('/[,\n\r]+/', $codelist_str);
+            // Filter out empty values that might result from trailing commas etc.
+            $access_value = array_filter(array_map('trim', $access_value));
+            if (empty($access_value)) {
+                $access_type = 'public';
+            }
+        }
+
+        if (update_wall_access($wall_id, $access_type, $access_value)) {
+            $success_message = 'Wall access control updated successfully!';
+            $wall = get_wall($wall_id); // Refresh wall data
         } else {
-            $error_message = 'Failed to update wall password.';
+            $error_message = 'Failed to update wall access control.';
         }
     }
 
@@ -264,11 +281,40 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
         <hr>
         <h2>Wall Security</h2>
         <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post">
-            <p>Current Status: <strong><?= $wall['access_control']['type'] === 'password' ? 'Password Protected' : 'Public' ?></strong></p>
-            <label for="wall_password">Set/Change Password (leave empty to make public):</label>
-            <input type="password" name="wall_password" id="wall_password" placeholder="Enter new password">
-            <button type="submit" name="update_password">Update Password</button>
+            <label for="access_type">Access Type:</label>
+            <select name="access_type" id="access_type" onchange="toggleAccessInputs()">
+                <option value="public" <?= $wall['access_control']['type'] === 'public' ? 'selected' : '' ?>>Public</option>
+                <option value="password" <?= $wall['access_control']['type'] === 'password' ? 'selected' : '' ?>>Password</option>
+                <option value="codelist" <?= $wall['access_control']['type'] === 'codelist' ? 'selected' : '' ?>>Codelist</option>
+            </select>
+
+            <div id="password_input" style="display: none; margin-top: 10px;">
+                <label for="access_password">Password (leave empty to remove):</label>
+                <input type="password" name="access_password" id="access_password" placeholder="Enter password">
+            </div>
+
+            <div id="codelist_input" style="display: none; margin-top: 10px;">
+                <label for="access_codelist">Access Codes (one per line or comma-separated):</label>
+                <textarea name="access_codelist" id="access_codelist" rows="5" placeholder="code1, code2, code3"><?php
+                    if ($wall['access_control']['type'] === 'codelist') {
+                        // This is tricky as we can't show the hashed codes. We leave it blank for user to enter new ones.
+                        // A better UI might show "X codes set". For now, this is fine.
+                    }
+                ?></textarea>
+            </div>
+
+            <button type="submit" name="update_access" style="margin-top: 10px;">Update Access Control</button>
         </form>
+
+        <script>
+            function toggleAccessInputs() {
+                var type = document.getElementById('access_type').value;
+                document.getElementById('password_input').style.display = (type === 'password') ? 'block' : 'none';
+                document.getElementById('codelist_input').style.display = (type === 'codelist') ? 'block' : 'none';
+            }
+            // Run on page load to set initial state
+            toggleAccessInputs();
+        </script>
         <hr>
 
         <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data">

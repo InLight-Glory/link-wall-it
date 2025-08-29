@@ -123,3 +123,19 @@ function decrypt_data(string $encrypted_data, string $password) {
 
     return $decrypted_data;
 }
+
+/**
+ * Verifies a plaintext code against a list of hashed codes.
+ *
+ * @param string $plaintext_code The code to check.
+ * @param array $hashed_codes_list The list of hashed code objects (each with 'hash' and 'salt').
+ * @return bool True if a match is found, false otherwise.
+ */
+function verify_codelist_code(string $plaintext_code, array $hashed_codes_list): bool {
+    foreach ($hashed_codes_list as $hashed_code) {
+        if (verify_password($plaintext_code, $hashed_code['hash'], $hashed_code['salt'])) {
+            return true;
+        }
+    }
+    return false;
+}

@@ -2,7 +2,6 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Start the session to track unlocked walls
 session_start();
 
 require_once __DIR__ . '/app/core/functions.php';
@@ -22,34 +21,51 @@ if (!$wall) {
 }
 
 // --- Check Access Control ---
-$is_protected = $wall['access_control']['type'] === 'password';
+$access_type = $wall['access_control']['type'];
 $auth_error = '';
+$is_unlocked = false;
 
-// Handle password submission
-if ($is_protected && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wall_password'])) {
-    $submitted_password = $_POST['wall_password'];
-    if (verify_password($submitted_password, $wall['access_control']['password']['hash'], $wall['access_control']['password']['salt'])) {
-        // Password is correct. Store it in the session to use for decryption.
-        $_SESSION['wall_passwords'][$wall_id] = $submitted_password;
-        // Redirect to clear POST data and show the wall
-        header("Location: wall.php?id=" . $wall_id);
-        exit;
-    } else {
-        $auth_error = 'Incorrect password.';
+// A wall is considered unlocked if its ID is in the 'unlocked_walls' session array.
+// This is used for non-encrypted, code-based access.
+if (isset($_SESSION['unlocked_walls']) && in_array($wall_id, $_SESSION['unlocked_walls'])) {
+    $is_unlocked = true;
+}
+// A wall is also unlocked if its password is in the 'wall_passwords' session array.
+// This is used for encrypted, password-based access.
+if (isset($_SESSION['wall_passwords'][$wall_id])) {
+    $is_unlocked = true;
+}
+
+// Handle POST request for unlocking
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($access_type === 'password' && isset($_POST['wall_password'])) {
+        $submitted_password = $_POST['wall_password'];
+        if (verify_password($submitted_password, $wall['access_control']['password']['hash'], $wall['access_control']['password']['salt'])) {
+            $_SESSION['wall_passwords'][$wall_id] = $submitted_password;
+            header("Location: wall.php?id=" . $wall_id);
+            exit;
+        } else {
+            $auth_error = 'Incorrect password.';
+        }
+    } elseif ($access_type === 'codelist' && isset($_POST['access_code'])) {
+        $submitted_code = $_POST['access_code'];
+        if (verify_codelist_code($submitted_code, $wall['access_control']['codelist'])) {
+            $_SESSION['unlocked_walls'][] = $wall_id;
+            header("Location: wall.php?id=" . $wall_id);
+            exit;
+        } else {
+            $auth_error = 'Incorrect access code.';
+        }
     }
 }
 
-// Check if user is authorized for this wall
-$is_unlocked = isset($_SESSION['wall_passwords'][$wall_id]);
-$can_view_content = !$is_protected || $is_unlocked;
+$can_view_content = ($access_type === 'public') || $is_unlocked;
 
 // --- Data Retrieval for Display ---
 $links = [];
 if ($can_view_content) {
     $raw_links = get_links_for_wall($wall_id);
-    // Decrypt link data if necessary
-    if ($is_protected && $is_unlocked) {
-        // Get the password from the session to use for decryption
+    if ($access_type === 'password' && $is_unlocked) {
         $password = $_SESSION['wall_passwords'][$wall_id];
         foreach ($raw_links as $link) {
             $link['title'] = decrypt_data($link['title'], $password) ?: '[Decryption Failed]';
@@ -57,13 +73,11 @@ if ($can_view_content) {
             $links[] = $link;
         }
     } else {
-        // For public walls, the data is not encrypted
         $links = $raw_links;
     }
 }
 
-
-// Fetch parents for breadcrumbs
+// --- Parent data for breadcrumbs ---
 $side = get_side($wall['side_id']);
 $building = $side ? get_building($side['building_id']) : null;
 $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
@@ -91,9 +105,9 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
         .link-image { flex-shrink: 0; width: 80px; height: 80px; margin-right: 20px; }
         .link-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
         .link-text { flex-grow: 1; }
-        .no-content, .password-form { text-align: center; color: #7f8c8d; padding: 40px 20px; background-color: #fff; border-radius: 8px; }
-        .password-form input { padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 4px; }
-        .password-form button { padding: 10px 15px; border: none; background-color: #3498db; color: white; border-radius: 4px; cursor: pointer; }
+        .no-content, .access-form { text-align: center; color: #7f8c8d; padding: 40px 20px; background-color: #fff; border-radius: 8px; }
+        .access-form input { padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 4px; }
+        .access-form button { padding: 10px 15px; border: none; background-color: #3498db; color: white; border-radius: 4px; cursor: pointer; }
         .error-message { color: #e74c3c; margin-bottom: 15px; }
     </style>
 </head>
@@ -113,23 +127,17 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
             <?php if ($can_view_content): ?>
                 <div class="link-list">
                     <?php if (empty($links)): ?>
-                        <div class="no-content">
-                            <p>This wall has no links yet.</p>
-                        </div>
+                        <div class="no-content"><p>This wall has no links yet.</p></div>
                     <?php else: ?>
                         <?php foreach ($links as $link): ?>
                             <a href="<?= htmlspecialchars($link['url']) ?>" target="_blank" class="link-item">
                                 <div class="link-content">
                                     <?php if (!empty($link['image'])): ?>
-                                        <div class="link-image">
-                                            <img src="<?= htmlspecialchars($link['image']) ?>" alt="Link thumbnail">
-                                        </div>
+                                        <div class="link-image"><img src="<?= htmlspecialchars($link['image']) ?>" alt="Link thumbnail"></div>
                                     <?php endif; ?>
                                     <div class="link-text">
                                         <h2><?= htmlspecialchars($link['title']) ?></h2>
-                                        <?php if (!empty($link['description'])): ?>
-                                            <p><?= htmlspecialchars($link['description']) ?></p>
-                                        <?php endif; ?>
+                                        <?php if (!empty($link['description'])): ?><p><?= htmlspecialchars($link['description']) ?></p><?php endif; ?>
                                     </div>
                                 </div>
                             </a>
@@ -137,16 +145,23 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                     <?php endif; ?>
                 </div>
             <?php else: ?>
-                <div class="password-form">
+                <div class="access-form">
                     <h2>This content is protected</h2>
-                    <p>Please enter the password to view this wall.</p>
-                    <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post">
-                        <?php if ($auth_error): ?>
-                            <p class="error-message"><?= htmlspecialchars($auth_error) ?></p>
-                        <?php endif; ?>
-                        <input type="password" name="wall_password" required>
-                        <button type="submit">Unlock</button>
-                    </form>
+                    <?php if ($access_type === 'password'): ?>
+                        <p>Please enter the password to view this wall.</p>
+                        <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post">
+                            <?php if ($auth_error): ?><p class="error-message"><?= htmlspecialchars($auth_error) ?></p><?php endif; ?>
+                            <input type="password" name="wall_password" required>
+                            <button type="submit">Unlock</button>
+                        </form>
+                    <?php elseif ($access_type === 'codelist'): ?>
+                        <p>Please enter an access code to view this wall.</p>
+                        <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post">
+                            <?php if ($auth_error): ?><p class="error-message"><?= htmlspecialchars($auth_error) ?></p><?php endif; ?>
+                            <input type="text" name="access_code" required>
+                            <button type="submit">Unlock</button>
+                        </form>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </main>

@@ -289,7 +289,6 @@ function delete_side($id) {
 function create_wall($side_id, $name) {
     $db = get_db();
 
-    // Check if parent side exists
     if (!get_side($side_id)) {
         error_log("Attempted to create wall for non-existent side ID: $side_id");
         return false;
@@ -300,11 +299,9 @@ function create_wall($side_id, $name) {
         'side_id' => $side_id,
         'name' => htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
         'access_control' => [
-            'type' => 'none',
-            'password' => [
-                'hash' => null,
-                'salt' => null
-            ]
+            'type' => 'public', // 'public', 'password', 'codelist'
+            'password' => ['hash' => null, 'salt' => null],
+            'codelist' => []
         ]
     ];
 
@@ -317,34 +314,43 @@ function create_wall($side_id, $name) {
 }
 
 /**
- * Updates a wall's password protection.
+ * Updates a wall's access control settings.
  *
  * @param string $id The ID of the wall to update.
- * @param string $password The new password. If empty, protection is removed.
+ * @param string $type The new access type ('public', 'password', 'codelist').
+ * @param mixed $value The corresponding value (password string or array of codes).
  * @return bool True on success, false on failure.
  */
-function update_wall_password($id, $password) {
+function update_wall_access(string $id, string $type, $value = null): bool {
     $db = get_db();
     $found = false;
     foreach ($db['walls'] as &$wall) {
         if ($wall['id'] === $id) {
-            if (empty($password)) {
-                // Remove password protection
-                $wall['access_control'] = [
-                    'type' => 'none',
-                    'password' => ['hash' => null, 'salt' => null]
-                ];
-            } else {
-                // Set password protection
-                $password_data = hash_password($password);
-                $wall['access_control'] = [
-                    'type' => 'password',
-                    'password' => [
-                        'hash' => $password_data['hash'],
-                        'salt' => $password_data['salt']
-                    ]
-                ];
+            // Reset access control to a clean state
+            $wall['access_control'] = [
+                'type' => 'public',
+                'password' => ['hash' => null, 'salt' => null],
+                'codelist' => []
+            ];
+
+            if ($type === 'password' && !empty($value)) {
+                $password_data = hash_password($value);
+                $wall['access_control']['type'] = 'password';
+                $wall['access_control']['password']['hash'] = $password_data['hash'];
+                $wall['access_control']['password']['salt'] = $password_data['salt'];
+            } elseif ($type === 'codelist' && is_array($value) && !empty($value)) {
+                $wall['access_control']['type'] = 'codelist';
+                $hashed_codes = [];
+                foreach ($value as $code) {
+                    // Trim and ensure code is not empty
+                    $trimmed_code = trim($code);
+                    if (!empty($trimmed_code)) {
+                        $hashed_codes[] = hash_password($trimmed_code);
+                    }
+                }
+                $wall['access_control']['codelist'] = $hashed_codes;
             }
+
             $found = true;
             break;
         }
