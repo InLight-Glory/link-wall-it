@@ -70,65 +70,127 @@ function handle_image_upload($file_input_name) {
 // --- Form Handling ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+    // Handle 'Update Password'
+    if (isset($_POST['update_password'])) {
+        $new_password = $_POST['wall_password'] ?? '';
+        // Add confirmation logic if needed, for now, we'll just set it.
+        if (update_wall_password($wall_id, $new_password)) {
+            $success_message = 'Wall password updated successfully!';
+            // Refresh wall data to show new status
+            $wall = get_wall($wall_id);
+        } else {
+            $error_message = 'Failed to update wall password.';
+        }
+    }
+
     // Handle 'Create Link'
-    if (isset($_POST['create_link'])) {
-        $title = $_POST['link_title'];
-        $url = $_POST['link_url'];
+    elseif (isset($_POST['create_link'])) {
+        $title = $_POST['link_title'] ?? '';
+        $url = $_POST['link_url'] ?? '';
         $description = $_POST['link_description'] ?? '';
 
-        if (!empty($title) && !empty($url)) {
-            $image_result = handle_image_upload('link_image');
-            if (isset($image_result['error'])) {
-                $error_message = $image_result['error'];
-            } else {
-                $image_path = $image_result['path'];
-                if (create_link($wall_id, $title, $url, $description, $image_path)) {
-                    $success_message = 'Link created successfully!';
+        if (empty($title) || empty($url)) {
+            $error_message = 'Title and URL are required.';
+        } elseif (!filter_var($url, FILTER_VALIDATE_URL)) {
+            $error_message = 'The provided URL is not valid.';
+        } else {
+            $is_protected = $wall['access_control']['type'] === 'password';
+            $password = $_POST['wall_password_for_encryption'] ?? '';
+            $can_proceed = false;
+
+            if ($is_protected) {
+                if (verify_password($password, $wall['access_control']['password']['hash'], $wall['access_control']['password']['salt'])) {
+                    $can_proceed = true;
                 } else {
-                    $error_message = 'Failed to create link. Please ensure the URL is valid.';
+                    $error_message = 'Incorrect wall password. Cannot save link.';
+                }
+            } else {
+                $can_proceed = true; // Not protected, so we can proceed
+            }
+
+            if ($can_proceed) {
+                $image_result = handle_image_upload('link_image');
+                if (isset($image_result['error'])) {
+                    $error_message = $image_result['error'];
+                } else {
+                    $link_data = [
+                        'title' => $is_protected ? encrypt_data($title, $password) : htmlspecialchars($title, ENT_QUOTES, 'UTF-8'),
+                        'url' => $url, // We decided not to encrypt the URL
+                        'description' => $is_protected ? encrypt_data($description, $password) : htmlspecialchars($description, ENT_QUOTES, 'UTF-8'),
+                        'image' => $image_result['path'],
+                    ];
+
+                    if (create_link($wall_id, $link_data)) {
+                        $success_message = 'Link created successfully!';
+                    } else {
+                        $error_message = 'Failed to create link.';
+                    }
                 }
             }
-        } else {
-            $error_message = 'Title and URL are required.';
         }
     }
     // Handle 'Update Link'
     elseif (isset($_POST['update_link'])) {
         $link_id = $_POST['link_id'];
-        $title = $_POST['link_title'];
-        $url = $_POST['link_url'];
+        $title = $_POST['link_title'] ?? '';
+        $url = $_POST['link_url'] ?? '';
         $description = $_POST['link_description'] ?? '';
 
-        $current_link = get_link($link_id);
-        $image_path = $current_link['image'];
-
-        // Handle image deletion
-        if (isset($_POST['delete_image']) && $_POST['delete_image'] == '1') {
-            if (!empty($image_path) && file_exists(__DIR__ . '/../' . $image_path)) {
-                unlink(__DIR__ . '/../' . $image_path);
-            }
-            $image_path = ''; // Clear the image path
-        }
-
-        // Handle new image upload
-        $image_result = handle_image_upload('link_image');
-        if (isset($image_result['error'])) {
-            $error_message = $image_result['error'];
+        if (empty($title) || empty($url)) {
+            $error_message = 'Title and URL are required.';
+        } elseif (!filter_var($url, FILTER_VALIDATE_URL)) {
+            $error_message = 'The provided URL is not valid.';
         } else {
-            // If a new image was uploaded, use its path
-            if ($image_result['path'] !== null) {
-                 // Delete old image if it exists
-                if (!empty($image_path) && file_exists(__DIR__ . '/../' . $image_path)) {
-                    unlink(__DIR__ . '/../' . $image_path);
+            $is_protected = $wall['access_control']['type'] === 'password';
+            $password = $_POST['wall_password_for_encryption'] ?? '';
+            $can_proceed = false;
+
+            if ($is_protected) {
+                if (verify_password($password, $wall['access_control']['password']['hash'], $wall['access_control']['password']['salt'])) {
+                    $can_proceed = true;
+                } else {
+                    $error_message = 'Incorrect wall password. Cannot save link.';
                 }
-                $image_path = $image_result['path'];
+            } else {
+                $can_proceed = true;
             }
 
-            if (update_link($link_id, $title, $url, $description, $image_path)) {
-                header('Location: manage_wall.php?wall_id=' . $wall_id . '&update=success');
-                exit;
-            } else {
-                $error_message = 'Failed to update link. Please ensure the URL is valid.';
+            if ($can_proceed) {
+                $current_link = get_link($link_id);
+                $image_path = $current_link['image'];
+
+                if (isset($_POST['delete_image']) && $_POST['delete_image'] == '1') {
+                    if (!empty($image_path) && file_exists(__DIR__ . '/../' . $image_path)) {
+                        unlink(__DIR__ . '/../' . $image_path);
+                    }
+                    $image_path = '';
+                }
+
+                $image_result = handle_image_upload('link_image');
+                if (isset($image_result['error'])) {
+                    $error_message = $image_result['error'];
+                } else {
+                    if ($image_result['path'] !== null) {
+                        if (!empty($image_path) && file_exists(__DIR__ . '/../' . $image_path)) {
+                            unlink(__DIR__ . '/../' . $image_path);
+                        }
+                        $image_path = $image_result['path'];
+                    }
+
+                    $link_data = [
+                        'title' => $is_protected ? encrypt_data($title, $password) : htmlspecialchars($title, ENT_QUOTES, 'UTF-8'),
+                        'url' => $url,
+                        'description' => $is_protected ? encrypt_data($description, $password) : htmlspecialchars($description, ENT_QUOTES, 'UTF-8'),
+                        'image' => $image_path,
+                    ];
+
+                    if (update_link($link_id, $link_data)) {
+                        header('Location: manage_wall.php?wall_id=' . $wall_id . '&update=success');
+                        exit;
+                    } else {
+                        $error_message = 'Failed to update link.';
+                    }
+                }
             }
         }
     }
@@ -199,8 +261,22 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
         <?php if ($success_message): ?><div class="message success"><?= htmlspecialchars($success_message) ?></div><?php endif; ?>
         <?php if ($error_message): ?><div class="message error"><?= htmlspecialchars($error_message) ?></div><?php endif; ?>
 
+        <hr>
+        <h2>Wall Security</h2>
+        <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post">
+            <p>Current Status: <strong><?= $wall['access_control']['type'] === 'password' ? 'Password Protected' : 'Public' ?></strong></p>
+            <label for="wall_password">Set/Change Password (leave empty to make public):</label>
+            <input type="password" name="wall_password" id="wall_password" placeholder="Enter new password">
+            <button type="submit" name="update_password">Update Password</button>
+        </form>
+        <hr>
+
         <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data">
             <h2>Create New Link</h2>
+            <?php if ($wall['access_control']['type'] === 'password'): ?>
+                <p style="color: #c0392b; font-weight: bold;">This wall is password protected. You must enter the wall's password to encrypt and save new links.</p>
+                <input type="password" name="wall_password_for_encryption" placeholder="Enter Wall Password" required>
+            <?php endif; ?>
             <input type="text" name="link_title" placeholder="Link Title" required>
             <input type="url" name="link_url" placeholder="https://example.com" required>
             <textarea name="link_description" placeholder="Optional Description"></textarea>
@@ -225,6 +301,12 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
                         <?php if ($is_editing): ?>
                             <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data" style="width: 100%;">
                                 <input type="hidden" name="link_id" value="<?= htmlspecialchars($link['id']) ?>">
+
+                                <?php if ($wall['access_control']['type'] === 'password'): ?>
+                                    <p style="color: #c0392b; font-weight: bold;">This wall is password protected. You must enter the wall's password to save changes.</p>
+                                    <input type="password" name="wall_password_for_encryption" placeholder="Enter Wall Password" required>
+                                <?php endif; ?>
+
                                 <input type="text" name="link_title" value="<?= htmlspecialchars($link['title']) ?>" required>
                                 <input type="url" name="link_url" value="<?= htmlspecialchars($link['url']) ?>" required>
                                 <textarea name="link_description"><?= htmlspecialchars($link['description']) ?></textarea>

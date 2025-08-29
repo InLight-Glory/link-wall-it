@@ -1,0 +1,6 @@
+# Configuration files
+config.php
+.env
+
+# Dependencies
+/vendor/

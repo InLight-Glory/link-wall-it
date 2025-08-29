@@ -1,7 +1,8 @@
 <?php
 
-// Require the database helper functions
+// Require helper files
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/encryption.php';
 
 // --- Building Functions ---
 
@@ -298,7 +299,13 @@ function create_wall($side_id, $name) {
         'id' => 'w_' . uniqid(),
         'side_id' => $side_id,
         'name' => htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
-        'access_control' => ['type' => 'none'], // Default access control
+        'access_control' => [
+            'type' => 'none',
+            'password' => [
+                'hash' => null,
+                'salt' => null
+            ]
+        ]
     ];
 
     $db['walls'][] = $new_wall;
@@ -306,6 +313,47 @@ function create_wall($side_id, $name) {
     if (save_db($db)) {
         return $new_wall['id'];
     }
+    return false;
+}
+
+/**
+ * Updates a wall's password protection.
+ *
+ * @param string $id The ID of the wall to update.
+ * @param string $password The new password. If empty, protection is removed.
+ * @return bool True on success, false on failure.
+ */
+function update_wall_password($id, $password) {
+    $db = get_db();
+    $found = false;
+    foreach ($db['walls'] as &$wall) {
+        if ($wall['id'] === $id) {
+            if (empty($password)) {
+                // Remove password protection
+                $wall['access_control'] = [
+                    'type' => 'none',
+                    'password' => ['hash' => null, 'salt' => null]
+                ];
+            } else {
+                // Set password protection
+                $password_data = hash_password($password);
+                $wall['access_control'] = [
+                    'type' => 'password',
+                    'password' => [
+                        'hash' => $password_data['hash'],
+                        'salt' => $password_data['salt']
+                    ]
+                ];
+            }
+            $found = true;
+            break;
+        }
+    }
+
+    if ($found) {
+        return save_db($db);
+    }
+
     return false;
 }
 
@@ -407,28 +455,21 @@ function delete_wall($id) {
  * @param string $image (Optional) An image URL for the link.
  * @return string|bool The new link's ID on success, false on failure.
  */
-function create_link($wall_id, $title, $url, $description = '', $image = '') {
+function create_link(string $wall_id, array $link_data): string|false {
     $db = get_db();
 
-    // Check if parent wall exists
     if (!get_wall($wall_id)) {
         error_log("Attempted to create link for non-existent wall ID: $wall_id");
-        return false;
-    }
-
-    // Basic URL validation
-    if (!filter_var($url, FILTER_VALIDATE_URL)) {
-        error_log("Attempted to create link with invalid URL: $url");
         return false;
     }
 
     $new_link = [
         'id' => 'l_' . uniqid(),
         'wall_id' => $wall_id,
-        'title' => htmlspecialchars($title, ENT_QUOTES, 'UTF-8'),
-        'url' => $url,
-        'description' => htmlspecialchars($description, ENT_QUOTES, 'UTF-8'),
-        'image' => $image, // Assuming image path is handled separately and is safe
+        'title' => $link_data['title'],
+        'url' => $link_data['url'],
+        'description' => $link_data['description'],
+        'image' => $link_data['image'],
     ];
 
     $db['links'][] = $new_link;
@@ -482,21 +523,19 @@ function get_link($id) {
  * @param string $image The new image URL.
  * @return bool True on success, false on failure.
  */
-function update_link($id, $title, $url, $description = '', $image = '') {
+function update_link(string $id, array $link_data): bool {
     $db = get_db();
     $found = false;
 
-    if (!filter_var($url, FILTER_VALIDATE_URL)) {
-        error_log("Attempted to update link with invalid URL: $url");
-        return false;
-    }
-
     foreach ($db['links'] as &$link) {
         if ($link['id'] === $id) {
-            $link['title'] = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
-            $link['url'] = $url;
-            $link['description'] = htmlspecialchars($description, ENT_QUOTES, 'UTF-8');
-            $link['image'] = $image;
+            $link['title'] = $link_data['title'];
+            $link['url'] = $link_data['url'];
+            $link['description'] = $link_data['description'];
+            // Only update image if it's provided, to not overwrite it with null
+            if (isset($link_data['image'])) {
+                $link['image'] = $link_data['image'];
+            }
             $found = true;
             break;
         }
