@@ -24,7 +24,27 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 
 ---
 
-### 💳 Phase 3: Monetization, Sharing & Installation
+### 🎨 Phase 3: Presentation Workflow
+
+*Goal: To build interactive presentation and session management capabilities.*
+
+- [📋] **Lesson Building:** Develop a workflow for creating lessons with block options and animations.
+- [📋] **Session Building:** Implement a workflow for creating sessions with categories, customization, and sharing/testing features.
+- [📋] **Room Management:** Add functionality for room creation with codes and live synchronization for students.
+
+---
+
+### 🔒 Phase 4: Security Enhancements
+
+*Goal: To implement robust security measures for the application.*
+
+- [📋] **Encryption:** Implement data encryption mechanisms.
+- [📋] **Access Control:** Enhance features for blocking unauthorized views.
+- [📋] **Stability:** Focus on overall application stability and hardening.
+
+---
+
+### 💳 Phase 5: Monetization, Sharing & Installation
 
 *Goal: To add key features for monetization, social sharing, and easy setup.*
 
@@ -35,7 +55,7 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 
 ---
 
-### ✅ Phase 4: Testing, Documentation & Refinement
+### ✅ Phase 6: Final Testing & Refinement
 
 *Goal: To polish the application, write comprehensive documentation, and prepare for release.*
 
