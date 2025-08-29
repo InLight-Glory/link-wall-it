@@ -24,8 +24,52 @@ $building = $side ? get_building($side['building_id']) : null;
 $error_message = '';
 $success_message = '';
 
+// --- Helper function for image uploads ---
+function handle_image_upload($file_input_name) {
+    // Check if a file was uploaded
+    if (isset($_FILES[$file_input_name]) && $_FILES[$file_input_name]['error'] === UPLOAD_ERR_OK) {
+        $file = $_FILES[$file_input_name];
+
+        // 1. Check file size (500 KB limit)
+        $max_size = 500 * 1024;
+        if ($file['size'] > $max_size) {
+            return ['error' => 'File is too large. Maximum size is 500KB.'];
+        }
+
+        // 2. Check MIME type
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime_type = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!in_array($mime_type, $allowed_types)) {
+            return ['error' => 'Invalid file type. Only JPG, PNG, GIF, and WEBP are allowed.'];
+        }
+
+        // 3. Move file
+        $upload_dir = __DIR__ . '/../assets/images/';
+        // Ensure directory exists
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+        $new_filename = uniqid('', true) . '_' . basename($file['name']);
+        $destination = $upload_dir . $new_filename;
+
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            // Return the relative path for storage
+            return ['path' => 'assets/images/' . $new_filename];
+        } else {
+            return ['error' => 'Failed to move uploaded file.'];
+        }
+    }
+    // No file uploaded or an error occurred that wasn't UPLOAD_ERR_OK
+    return ['path' => null];
+}
+
+
 // --- Form Handling ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     // Handle 'Create Link'
     if (isset($_POST['create_link'])) {
         $title = $_POST['link_title'];
@@ -33,10 +77,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $description = $_POST['link_description'] ?? '';
 
         if (!empty($title) && !empty($url)) {
-            if (create_link($wall_id, $title, $url, $description)) {
-                $success_message = 'Link created successfully!';
+            $image_result = handle_image_upload('link_image');
+            if (isset($image_result['error'])) {
+                $error_message = $image_result['error'];
             } else {
-                $error_message = 'Failed to create link. Please ensure the URL is valid.';
+                $image_path = $image_result['path'];
+                if (create_link($wall_id, $title, $url, $description, $image_path)) {
+                    $success_message = 'Link created successfully!';
+                } else {
+                    $error_message = 'Failed to create link. Please ensure the URL is valid.';
+                }
             }
         } else {
             $error_message = 'Title and URL are required.';
@@ -49,11 +99,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $url = $_POST['link_url'];
         $description = $_POST['link_description'] ?? '';
 
-        if (update_link($link_id, $title, $url, $description)) {
-            header('Location: manage_wall.php?wall_id=' . $wall_id . '&update=success');
-            exit;
+        $current_link = get_link($link_id);
+        $image_path = $current_link['image'];
+
+        // Handle image deletion
+        if (isset($_POST['delete_image']) && $_POST['delete_image'] == '1') {
+            if (!empty($image_path) && file_exists(__DIR__ . '/../' . $image_path)) {
+                unlink(__DIR__ . '/../' . $image_path);
+            }
+            $image_path = ''; // Clear the image path
+        }
+
+        // Handle new image upload
+        $image_result = handle_image_upload('link_image');
+        if (isset($image_result['error'])) {
+            $error_message = $image_result['error'];
         } else {
-            $error_message = 'Failed to update link. Please ensure the URL is valid.';
+            // If a new image was uploaded, use its path
+            if ($image_result['path'] !== null) {
+                 // Delete old image if it exists
+                if (!empty($image_path) && file_exists(__DIR__ . '/../' . $image_path)) {
+                    unlink(__DIR__ . '/../' . $image_path);
+                }
+                $image_path = $image_result['path'];
+            }
+
+            if (update_link($link_id, $title, $url, $description, $image_path)) {
+                header('Location: manage_wall.php?wall_id=' . $wall_id . '&update=success');
+                exit;
+            } else {
+                $error_message = 'Failed to update link. Please ensure the URL is valid.';
+            }
         }
     }
 }
@@ -123,11 +199,13 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
         <?php if ($success_message): ?><div class="message success"><?= htmlspecialchars($success_message) ?></div><?php endif; ?>
         <?php if ($error_message): ?><div class="message error"><?= htmlspecialchars($error_message) ?></div><?php endif; ?>
 
-        <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post">
+        <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data">
             <h2>Create New Link</h2>
             <input type="text" name="link_title" placeholder="Link Title" required>
             <input type="url" name="link_url" placeholder="https://example.com" required>
             <textarea name="link_description" placeholder="Optional Description"></textarea>
+            <label for="link_image">Image (Optional, max 500KB):</label>
+            <input type="file" name="link_image" id="link_image">
             <button type="submit" name="create_link">Create Link</button>
         </form>
 
@@ -145,19 +223,38 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
                         ?>
 
                         <?php if ($is_editing): ?>
-                            <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" style="width: 100%;">
+                            <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data" style="width: 100%;">
                                 <input type="hidden" name="link_id" value="<?= htmlspecialchars($link['id']) ?>">
                                 <input type="text" name="link_title" value="<?= htmlspecialchars($link['title']) ?>" required>
                                 <input type="url" name="link_url" value="<?= htmlspecialchars($link['url']) ?>" required>
                                 <textarea name="link_description"><?= htmlspecialchars($link['description']) ?></textarea>
+
+                                <label for="link_image_<?= htmlspecialchars($link['id']) ?>">New Image (Optional, max 500KB):</label>
+                                <input type="file" name="link_image" id="link_image_<?= htmlspecialchars($link['id']) ?>">
+
+                                <?php if (!empty($link['image'])): ?>
+                                    <div class="current-image">
+                                        <p>Current Image:</p>
+                                        <img src="../<?= htmlspecialchars($link['image']) ?>" alt="Current Image" style="max-width: 100px; max-height: 100px;">
+                                        <label>
+                                            <input type="checkbox" name="delete_image" value="1"> Delete current image
+                                        </label>
+                                    </div>
+                                <?php endif; ?>
+
                                 <button type="submit" name="update_link">Update</button>
                                 <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>">Cancel</a>
                             </form>
                         <?php else: ?>
-                            <span>
-                                <strong><a href="<?= htmlspecialchars($link['url']) ?>" target="_blank"><?= htmlspecialchars($link['title']) ?></a></strong>
-                                <small>(<?= htmlspecialchars($link['url']) ?>)</small>
-                                <p><?= htmlspecialchars($link['description']) ?></p>
+                            <span style="display: flex; align-items: center;">
+                                <?php if (!empty($link['image'])): ?>
+                                    <img src="../<?= htmlspecialchars($link['image']) ?>" alt="Link thumbnail" style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px; border-radius: 4px;">
+                                <?php endif; ?>
+                                <div>
+                                    <strong><a href="<?= htmlspecialchars($link['url']) ?>" target="_blank"><?= htmlspecialchars($link['title']) ?></a></strong>
+                                    <small>(<?= htmlspecialchars($link['url']) ?>)</small>
+                                    <p style="margin: 0;"><?= htmlspecialchars($link['description']) ?></p>
+                                </div>
                             </span>
                             <span class="item-actions">
                                 <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>&action=edit&id=<?= htmlspecialchars($link['id']) ?>">Edit</a>

@@ -58,6 +58,10 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
         }
         .link-item h2 { margin-top: 0; font-size: 1.3em; color: #3498db; }
         .link-item p { margin-bottom: 0; color: #555; }
+        .link-content { display: flex; align-items: center; }
+        .link-image { flex-shrink: 0; width: 80px; height: 80px; margin-right: 20px; }
+        .link-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+        .link-text { flex-grow: 1; }
         .no-content { text-align: center; color: #7f8c8d; padding: 20px; background-color: #fff; border-radius: 8px; }
     </style>
 </head>
@@ -82,10 +86,19 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                 <?php else: ?>
                     <?php foreach ($links as $link): ?>
                         <a href="<?= htmlspecialchars($link['url']) ?>" target="_blank" class="link-item">
-                            <h2><?= htmlspecialchars($link['title']) ?></h2>
-                            <?php if (!empty($link['description'])): ?>
-                                <p><?= htmlspecialchars($link['description']) ?></p>
-                            <?php endif; ?>
+                            <div class="link-content">
+                                <?php if (!empty($link['image'])): ?>
+                                    <div class="link-image">
+                                        <img src="<?= htmlspecialchars($link['image']) ?>" alt="Link thumbnail">
+                                    </div>
+                                <?php endif; ?>
+                                <div class="link-text">
+                                    <h2><?= htmlspecialchars($link['title']) ?></h2>
+                                    <?php if (!empty($link['description'])): ?>
+                                        <p><?= htmlspecialchars($link['description']) ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </a>
                     <?php endforeach; ?>
                 <?php endif; ?>
