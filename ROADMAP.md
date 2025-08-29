@@ -20,21 +20,11 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 
 - [✅] **Admin Dashboard:** Create a secure, full-featured dashboard for managing all content.
 - [✅] **Public Views:** Develop the dynamic rendering for all public-facing pages (Buildings, Sides, Walls).
-- [📋] **Image Handling:** Implement image upload, storage, and management.
+- [✅] **Image Handling:** Implement image upload, storage, and management.
 
 ---
 
-### 🎨 Phase 3: Presentation Workflow
-
-*Goal: To build interactive presentation and session management capabilities.*
-
-- [📋] **Lesson Building:** Develop a workflow for creating lessons with block options and animations.
-- [📋] **Session Building:** Implement a workflow for creating sessions with categories, customization, and sharing/testing features.
-- [📋] **Room Management:** Add functionality for room creation with codes and live synchronization for students.
-
----
-
-### 🔒 Phase 4: Security Enhancements
+### 🔒 Phase 3: Security Enhancements
 
 *Goal: To implement robust security measures for the application.*
 
@@ -44,7 +34,7 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 
 ---
 
-### 💳 Phase 5: Monetization, Sharing & Installation
+### 💳 Phase 4: Monetization, Sharing & Installation
 
 *Goal: To add key features for monetization, social sharing, and easy setup.*
 
@@ -55,7 +45,7 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 
 ---
 
-### ✅ Phase 6: Final Testing & Refinement
+### ✅ Phase 5: Final Testing & Refinement
 
 *Goal: To polish the application, write comprehensive documentation, and prepare for release.*
 
