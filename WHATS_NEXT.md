@@ -1,20 +1,18 @@
 # 🎯 What's Next?
 
-This file tracks the immediate development focus. With the core logic and main security features now in place, our next major goal is to implement the features from **Phase 4: Monetization, Sharing & Installation**.
+This file tracks the immediate development focus. Based on our updated roadmap, the next priority is to implement the first task from **Phase 4**.
 
-## Current Focus: Phase 4 Implementation
+## Current Focus: Sharing Tools
 
-Our priorities for this phase are:
+Our immediate goal is to build out the sharing functionality for the application. This will involve:
 
-- **Stripe Integration:**
-  - Allow the admin to save their Stripe API keys securely.
-  - Implement a "Pay to Access" feature for individual Walls.
-  - Integrate Stripe.js/Elements for secure payment processing on the public-facing pages.
+- **"Copy Link" Buttons:**
+  - Add a button on the public `wall.php` page to easily copy the URL of the wall.
+  - Add a similar button on the `side.php` page.
+  - Add a button for each individual link to copy its specific URL.
 
-- **Sharing Tools:**
-  - Implement "Share" buttons that copy the direct URL for a Wall or Side.
-  - Integrate with common social media sharing APIs (e.g., Twitter, Facebook).
+- **Social Media Integration:**
+  - Implement "Share to Twitter" functionality using Twitter's Web Intent API.
+  - Implement "Share to Facebook" functionality using Facebook's Share Dialog.
 
-- **Installation Wizard:**
-  - Begin development of a user-friendly, guided installation script to simplify the setup process for new users.
-  - This wizard will handle server requirement checks, admin account creation, and initial database setup.
+Once these sharing tools are in place, we will proceed with the other items in Phase 4.

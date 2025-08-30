@@ -37,9 +37,9 @@ This document outlines the development roadmap for Link-Wall-It. We are followin
 
 *Goal: To add key features for monetization, social sharing, and easy setup.*
 
+- [📋] **Sharing Tools:** Create "copy link" and social sharing buttons.
 - [📋] **Stripe Integration:** Add support for payment-gated Walls via Stripe.
 - [📋] **Code Lock:** Implement a simple password/code lock for Walls.
-- [📋] **Sharing Tools:** Create "copy link" and social sharing buttons.
 - [📋] **Installation Wizard:** Build a user-friendly, guided setup process.
 
 ---
