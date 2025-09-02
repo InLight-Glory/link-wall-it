@@ -109,6 +109,9 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
         .access-form input { padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 4px; }
         .access-form button { padding: 10px 15px; border: none; background-color: #3498db; color: white; border-radius: 4px; cursor: pointer; }
         .error-message { color: #e74c3c; margin-bottom: 15px; }
+        .share-buttons { margin-top: 15px; display: flex; gap: 10px; justify-content: center; }
+        .share-btn { display: inline-block; padding: 5px 10px; border-radius: 4px; background-color: #ecf0f1; color: #34495e; text-decoration: none; font-size: 0.9em; border: 1px solid #bdc3c7; cursor: pointer; }
+        .link-item-footer { margin-top: 15px; text-align: right; }
     </style>
 </head>
 <body>
@@ -121,6 +124,11 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                 <?= htmlspecialchars($wall['name']) ?>
             </p>
             <h1><?= htmlspecialchars($wall['name']) ?></h1>
+            <div class="share-buttons">
+                <button class="share-btn" onclick="copyToClipboard(window.location.href, this)">Copy Wall Link</button>
+                <button class="share-btn" onclick="shareToTwitter(window.location.href, 'Check out this wall: <?= htmlspecialchars($wall['name']) ?>')">Share to Twitter</button>
+                <button class="share-btn" onclick="shareToFacebook(window.location.href)">Share to Facebook</button>
+            </div>
         </header>
 
         <main>
@@ -139,6 +147,11 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                                         <h2><?= htmlspecialchars($link['title']) ?></h2>
                                         <?php if (!empty($link['description'])): ?><p><?= htmlspecialchars($link['description']) ?></p><?php endif; ?>
                                     </div>
+                                </div>
+                                <div class="link-item-footer share-buttons">
+                                    <button class="share-btn" onclick="event.preventDefault(); copyToClipboard('<?= htmlspecialchars($link['url']) ?>', this)">Copy Link</button>
+                                    <button class="share-btn" onclick="event.preventDefault(); shareToTwitter('<?= htmlspecialchars($link['url']) ?>', 'Check out this link: <?= htmlspecialchars($link['title']) ?>')">Share to Twitter</button>
+                                    <button class="share-btn" onclick="event.preventDefault(); shareToFacebook('<?= htmlspecialchars($link['url']) ?>')">Share to Facebook</button>
                                 </div>
                             </a>
                         <?php endforeach; ?>
@@ -166,5 +179,6 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
             <?php endif; ?>
         </main>
     </div>
+    <script src="assets/js/sharing.js"></script>
 </body>
 </html>

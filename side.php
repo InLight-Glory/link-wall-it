@@ -40,9 +40,11 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
         .breadcrumb a { color: #3498db; text-decoration: none; }
         .breadcrumb { margin-bottom: 20px; font-size: 1.1em; }
         .wall-list { list-style: none; padding: 0; }
-        .wall-item { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 15px; }
+        .wall-item { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 15px; display: block; text-decoration: none; color: inherit; }
         .wall-item h2 { margin-top: 0; }
         .no-content { text-align: center; color: #7f8c8d; padding: 20px; background-color: #fff; border-radius: 8px; }
+        .share-buttons { margin-top: 15px; display: flex; gap: 10px; justify-content: center; }
+        .share-btn { display: inline-block; padding: 5px 10px; border-radius: 4px; background-color: #ecf0f1; color: #34495e; text-decoration: none; font-size: 0.9em; border: 1px solid #bdc3c7; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -56,6 +58,11 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                 <?= htmlspecialchars($side['name']) ?>
             </p>
             <h1><?= htmlspecialchars($side['name']) ?></h1>
+            <div class="share-buttons">
+                <button class="share-btn" onclick="copyToClipboard(window.location.href, this)">Copy Side Link</button>
+                <button class="share-btn" onclick="shareToTwitter(window.location.href, 'Check out this page: <?= htmlspecialchars($side['name']) ?>')">Share to Twitter</button>
+                <button class="share-btn" onclick="shareToFacebook(window.location.href)">Share to Facebook</button>
+            </div>
         </header>
 
         <main>
@@ -75,5 +82,6 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
             <?php endif; ?>
         </main>
     </div>
+    <script src="assets/js/sharing.js"></script>
 </body>
 </html>
