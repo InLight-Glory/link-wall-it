@@ -284,12 +284,12 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
             <label for="access_type">Access Type:</label>
             <select name="access_type" id="access_type" onchange="toggleAccessInputs()">
                 <option value="public" <?= $wall['access_control']['type'] === 'public' ? 'selected' : '' ?>>Public</option>
-                <option value="password" <?= $wall['access_control']['type'] === 'password' ? 'selected' : '' ?>>Password</option>
-                <option value="codelist" <?= $wall['access_control']['type'] === 'codelist' ? 'selected' : '' ?>>Codelist</option>
+                <option value="password" <?= $wall['access_control']['type'] === 'password' ? 'selected' : '' ?>>Password / Code</option>
+                <option value="codelist" <?= $wall['access_control']['type'] === 'codelist' ? 'selected' : '' ?>>Codelist (Multiple Codes)</option>
             </select>
 
             <div id="password_input" style="display: none; margin-top: 10px;">
-                <label for="access_password">Password (leave empty to remove):</label>
+                <label for="access_password">Password or Code (leave empty to remove):</label>
                 <input type="password" name="access_password" id="access_password" placeholder="Enter password">
             </div>
 
