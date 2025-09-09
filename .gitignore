@@ -1,0 +1,10 @@
+# Configuration files
+config.php
+.env
+
+# Dependencies
+/vendor/
+
+# Composer files
+composer.lock
+composer.phar

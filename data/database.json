@@ -1,0 +1,18 @@
+{
+    "settings": {
+        "site_title": "Link-Wall-It",
+    "site_description": "Your personal link wall.",
+    "stripe_publishable_key": "",
+    "stripe_secret_key": ""
+    },
+    "users": [
+        {
+            "username": "admin",
+            "password_hash": ""
+        }
+    ],
+    "buildings": [],
+    "sides": [],
+    "walls": [],
+    "links": []
+}

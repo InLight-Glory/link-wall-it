@@ -1,0 +1,15 @@
+{
+    "name": "link-wall-it/link-wall-it",
+    "description": "An open-source, self-hostable platform to curate, organize, and share link collections.",
+    "type": "project",
+    "require": {
+        "php": ">=8.0",
+        "stripe/stripe-php": "^10.0"
+    },
+    "authors": [
+        {
+            "name": "AI Agent Jules"
+        }
+    ],
+    "minimum-stability": "stable"
+}
