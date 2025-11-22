@@ -56,7 +56,7 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
     <div class="container">
         <header>
             <p class="breadcrumb"><a href="index.php">Home</a> &raquo; <?= htmlspecialchars($building['name']) ?></p>
-            <h1><?= htmlspecialchars($building['name']) ?></h1>
+            <h1>🏢 <?= htmlspecialchars($building['name']) ?></h1>
         </header>
 
         <main>
@@ -69,7 +69,7 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                 <div class="side-grid">
                     <?php foreach ($sides as $side): ?>
                         <div class="side-card">
-                            <h2><a href="side.php?id=<?= htmlspecialchars($side['id']) ?>"><?= htmlspecialchars($side['name']) ?></a></h2>
+                            <h2><a href="side.php?id=<?= htmlspecialchars($side['id']) ?>">📐 <?= htmlspecialchars($side['name']) ?></a></h2>
                         </div>
                     <?php endforeach; ?>
                 </div>

@@ -97,13 +97,15 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
         .breadcrumb a { color: #3498db; text-decoration: none; }
         .breadcrumb { margin-bottom: 20px; font-size: 1.1em; }
         .link-list { list-style: none; padding: 0; }
-        .link-item { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 15px; display: block; text-decoration: none; color: inherit; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .link-item:hover { transform: translateY(-3px); box-shadow: 0 5px 10px rgba(0,0,0,0.08); }
-        .link-item h2 { margin-top: 0; font-size: 1.3em; color: #3498db; }
-        .link-item p { margin-bottom: 0; color: #555; }
+        .link-item { background: #fff; border-bottom: 1px solid #eee; padding: 15px 10px; display: block; text-decoration: none; color: inherit; transition: background 0.2s ease; }
+        .link-item:first-child { border-top: 1px solid #eee; }
+        .link-item:hover { background: #f9f9f9; }
+        .link-item h2 { margin: 0 0 4px 0; font-size: 1.1em; font-weight: 600; color: #2c3e50; }
+        .link-url { font-size: 0.85em; color: #7f8c8d; margin-bottom: 4px; display: block; }
+        .link-item p { margin-bottom: 0; color: #555; font-size: 0.95em; }
         .link-content { display: flex; align-items: center; }
-        .link-image { flex-shrink: 0; width: 80px; height: 80px; margin-right: 20px; }
-        .link-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+        .link-image { flex-shrink: 0; width: 50px; height: 50px; margin-right: 15px; }
+        .link-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
         .link-text { flex-grow: 1; }
         .no-content, .access-form { text-align: center; color: #7f8c8d; padding: 40px 20px; background-color: #fff; border-radius: 8px; }
         .access-form input { padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 4px; }
@@ -123,7 +125,7 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                 <?php if ($side): ?><a href="side.php?id=<?= htmlspecialchars($side['id']) ?>"><?= htmlspecialchars($side['name']) ?></a> &raquo; <?php endif; ?>
                 <?= htmlspecialchars($wall['name']) ?>
             </p>
-            <h1><?= htmlspecialchars($wall['name']) ?></h1>
+            <h1>🧱 <?= htmlspecialchars($wall['name']) ?></h1>
             <div class="share-buttons">
                 <button class="share-btn" onclick="copyToClipboard(window.location.href, this)">Copy Wall Link</button>
                 <button class="share-btn" onclick="shareToTwitter(window.location.href, 'Check out this wall: <?= htmlspecialchars($wall['name']) ?>')">Share to Twitter</button>
@@ -145,6 +147,7 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                                     <?php endif; ?>
                                     <div class="link-text">
                                         <h2><?= htmlspecialchars($link['title']) ?></h2>
+                                        <span class="link-url"><?= htmlspecialchars($link['url']) ?></span>
                                         <?php if (!empty($link['description'])): ?><p><?= htmlspecialchars($link['description']) ?></p><?php endif; ?>
                                     </div>
                                 </div>

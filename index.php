@@ -65,7 +65,7 @@ $buildings = get_all_buildings();
                 <div class="building-grid">
                     <?php foreach ($buildings as $building): ?>
                         <div class="building-card">
-                            <h2><a href="building.php?id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a></h2>
+                            <h2><a href="building.php?id=<?= htmlspecialchars($building['id']) ?>">🏢 <?= htmlspecialchars($building['name']) ?></a></h2>
                         </div>
                     <?php endforeach; ?>
                 </div>

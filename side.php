@@ -57,7 +57,7 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                 <?php endif; ?>
                 <?= htmlspecialchars($side['name']) ?>
             </p>
-            <h1><?= htmlspecialchars($side['name']) ?></h1>
+            <h1>📐 <?= htmlspecialchars($side['name']) ?></h1>
             <div class="share-buttons">
                 <button class="share-btn" onclick="copyToClipboard(window.location.href, this)">Copy Side Link</button>
                 <button class="share-btn" onclick="shareToTwitter(window.location.href, 'Check out this page: <?= htmlspecialchars($side['name']) ?>')">Share to Twitter</button>
@@ -75,7 +75,7 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
                 <div class="wall-list">
                     <?php foreach ($walls as $wall): ?>
                         <a href="wall.php?id=<?= htmlspecialchars($wall['id']) ?>" class="wall-item">
-                            <h2><?= htmlspecialchars($wall['name']) ?></h2>
+                            <h2>🧱 <?= htmlspecialchars($wall['name']) ?></h2>
                         </a>
                     <?php endforeach; ?>
                 </div>
