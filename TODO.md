@@ -5,7 +5,7 @@ This document tracks the remaining tasks required to release **Link-Wall-It** as
 ### 🚧 Remaining Tasks
 
 - [ ] **Stripe Integration**
-  - Add admin settings for Stripe API keys.
+  - [x] Add admin settings for Stripe API keys.
   - Update Admin UI to set prices for Walls.
   - Implement frontend payment flow (Stripe Checkout).
   - Create backend webhook handler for payment confirmation.

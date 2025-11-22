@@ -94,7 +94,10 @@ if(isset($_GET['delete']) && $_GET['delete'] == 'success') {
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h1>Manage Buildings</h1>
-            <a href="logout.php" style="color: #e74c3c; text-decoration: none; font-weight: bold;">Logout</a>
+            <div>
+                <a href="settings.php" style="color: #3498db; text-decoration: none; font-weight: bold; margin-right: 15px;">Settings</a>
+                <a href="logout.php" style="color: #e74c3c; text-decoration: none; font-weight: bold;">Logout</a>
+            </div>
         </div>
 
         <?php if ($success_message): ?>
