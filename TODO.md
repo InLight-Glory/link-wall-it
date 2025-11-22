@@ -19,9 +19,9 @@ This document tracks the remaining tasks required to release **Link-Wall-It** as
   - [x] Implement unit tests for core logic (`app/core/functions.php`).
   - [x] Add integration tests for critical flows (Login, CRUD operations).
 
-- [ ] **Documentation**
-  - Write a User Manual for the admin interface.
-  - Create Developer Guides for contributing.
+- [x] **Documentation**
+  - [x] Write a User Manual for the admin interface.
+  - [x] Create Developer Guides for contributing.
 
 ### ✅ Completed for Beta
 
