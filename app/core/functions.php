@@ -562,7 +562,7 @@ function delete_wall($id) {
  * @param string $image (Optional) An image URL for the link.
  * @return string|bool The new link's ID on success, false on failure.
  */
-function create_link(string $wall_id, array $link_data): string|false {
+function create_link(string $wall_id, array $link_data) {
     $db = get_db();
 
     if (!get_wall($wall_id)) {

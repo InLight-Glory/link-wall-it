@@ -6,8 +6,8 @@
     "users": [
         {
             "username": "admin",
-            "password_hash": "$argon2id$v=19$m=65536,t=4,p=1$RUdTOVJTRk5aT1prTW5MNQ$4TBlH9PAoKit4f5u3+CLXSIVK1As0v\/R03JlALzZGRE",
-            "salt": "ec52bd9449f2721d7a35e0d71d9dc159"
+            "password_hash": "$argon2id$v=19$m=65536,t=4,p=1$ZW9jUFRKNzZSV1M0L0Z3eQ$YFKyt8gfoiNA2Emriu4x2reg57hbVmqNEsq+9aC/dEc",
+            "salt": "d07db8389a12fe48076aae4cc82cebd8"
         }
     ],
     "buildings": [],
