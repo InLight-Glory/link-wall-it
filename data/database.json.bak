@@ -1,0 +1,46 @@
+{
+    "settings": {
+        "site_title": "Link-Wall-It",
+        "site_description": "Your personal link wall."
+    },
+    "users": [
+        {
+            "username": "admin",
+            "password_hash": "$argon2id$v=19$m=65536,t=4,p=1$ZW9jUFRKNzZSV1M0L0Z3eQ$YFKyt8gfoiNA2Emriu4x2reg57hbVmqNEsq+9aC\/dEc",
+            "salt": "d07db8389a12fe48076aae4cc82cebd8"
+        }
+    ],
+    "buildings": [
+        {
+            "id": "b_6921da43553f6",
+            "name": "Test Building"
+        }
+    ],
+    "sides": [
+        {
+            "id": "s_6921da4355725",
+            "building_id": "b_6921da43553f6",
+            "name": "Test Side"
+        }
+    ],
+    "walls": [
+        {
+            "id": "w_6921da43558a2",
+            "side_id": "s_6921da4355725",
+            "name": "Test Wall",
+            "access_control": {
+                "type": "payment",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": [],
+                "payment": {
+                    "price": 9.99,
+                    "currency": "USD"
+                }
+            }
+        }
+    ],
+    "links": []
+}

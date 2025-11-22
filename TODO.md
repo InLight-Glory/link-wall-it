@@ -10,10 +10,10 @@ This document tracks the remaining tasks required to release **Link-Wall-It** as
   - [ ] Implement frontend payment flow (Stripe Checkout).
   - Create backend webhook handler for payment confirmation.
 
-- [ ] **Installation Wizard**
-  - Create a guided setup script (`install.php`) for first-time users.
-  - Allow configuration of Site Title and Admin Account (username/password).
-  - Ensure `data/database.json` is initialized correctly.
+- [x] **Installation Wizard**
+  - [x] Create a guided setup script (`install.php`) for first-time users.
+  - [x] Allow configuration of Site Title and Admin Account (username/password).
+  - [x] Ensure `data/database.json` is initialized correctly.
 
 - [ ] **Testing**
   - Implement unit tests for core logic (`app/core/functions.php`).

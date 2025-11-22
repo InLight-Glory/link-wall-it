@@ -4,6 +4,17 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/encryption.php';
 
+// Check installation status
+$lock_file = __DIR__ . '/../../data/installed.lock';
+if (!file_exists($lock_file) && php_sapi_name() !== 'cli') {
+    // Determine if we are already on the install page to avoid infinite redirect
+    $script_name = $_SERVER['SCRIPT_NAME'] ?? '';
+    if (substr($script_name, -11) !== 'install.php') {
+        header('Location: /install.php');
+        exit;
+    }
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

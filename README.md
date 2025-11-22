@@ -50,7 +50,9 @@ To get a local copy up and running, follow these simple steps.
     ```sh
     cd link-wall-it
     ```
-3.  (Coming Soon) Follow the on-screen installation wizard by visiting the site in your browser. For now, the `data/database.json` file is pre-configured with a default setup.
+3.  Start your web server (e.g., `php -S localhost:8080`).
+4.  Visit the site in your browser. You will be automatically redirected to the **Installation Wizard** (`/install.php`).
+5.  Follow the on-screen instructions to set up your admin account and site title.
 
 ## 🤝 How to Contribute
 
