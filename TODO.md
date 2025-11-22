@@ -15,9 +15,9 @@ This document tracks the remaining tasks required to release **Link-Wall-It** as
   - [x] Allow configuration of Site Title and Admin Account (username/password).
   - [x] Ensure `data/database.json` is initialized correctly.
 
-- [ ] **Testing**
-  - Implement unit tests for core logic (`app/core/functions.php`).
-  - Add integration tests for critical flows (Login, CRUD operations).
+- [x] **Testing**
+  - [x] Implement unit tests for core logic (`app/core/functions.php`).
+  - [x] Add integration tests for critical flows (Login, CRUD operations).
 
 - [ ] **Documentation**
   - Write a User Manual for the admin interface.
