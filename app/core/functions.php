@@ -10,7 +10,13 @@ if (!file_exists($lock_file) && php_sapi_name() !== 'cli') {
     // Determine if we are already on the install page to avoid infinite redirect
     $script_name = $_SERVER['SCRIPT_NAME'] ?? '';
     if (substr($script_name, -11) !== 'install.php') {
-        header('Location: /install.php');
+        // Handle redirection for subdirectories (e.g. admin/)
+        $redirect_url = 'install.php';
+        if (strpos($script_name, '/admin/') !== false) {
+            $redirect_url = '../install.php';
+        }
+
+        header('Location: ' . $redirect_url);
         exit;
     }
 }
