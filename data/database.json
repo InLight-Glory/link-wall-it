@@ -6,7 +6,7 @@
     "users": [
         {
             "username": "admin",
-            "password_hash": "$argon2id$v=19$m=65536,t=4,p=1$ZW9jUFRKNzZSV1M0L0Z3eQ$YFKyt8gfoiNA2Emriu4x2reg57hbVmqNEsq+9aC\/dEc",
+            "password_hash": "$argon2id$v=19$m=65536,t=4,p=1$ZW9jUFRKNzZSV1M0L0Z3eQ$YFKyt8gfoiNA2Emriu4x2reg57hbVmqNEsq+9aC/dEc",
             "salt": "d07db8389a12fe48076aae4cc82cebd8"
         }
     ],

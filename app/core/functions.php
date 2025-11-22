@@ -356,9 +356,10 @@ function create_wall($side_id, $name) {
         'side_id' => $side_id,
         'name' => htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
         'access_control' => [
-            'type' => 'public', // 'public', 'password', 'codelist'
+            'type' => 'public', // 'public', 'password', 'codelist', 'payment'
             'password' => ['hash' => null, 'salt' => null],
-            'codelist' => []
+            'codelist' => [],
+            'payment' => ['price' => 0, 'currency' => 'USD']
         ]
     ];
 
@@ -387,7 +388,8 @@ function update_wall_access(string $id, string $type, $value = null): bool {
             $wall['access_control'] = [
                 'type' => 'public',
                 'password' => ['hash' => null, 'salt' => null],
-                'codelist' => []
+                'codelist' => [],
+                'payment' => ['price' => 0, 'currency' => 'USD']
             ];
 
             if ($type === 'password' && !empty($value)) {
@@ -406,6 +408,11 @@ function update_wall_access(string $id, string $type, $value = null): bool {
                     }
                 }
                 $wall['access_control']['codelist'] = $hashed_codes;
+            } elseif ($type === 'payment') {
+                $wall['access_control']['type'] = 'payment';
+                // Value for payment is the price
+                $wall['access_control']['payment']['price'] = (float)$value;
+                $wall['access_control']['payment']['currency'] = 'USD';
             }
 
             $found = true;

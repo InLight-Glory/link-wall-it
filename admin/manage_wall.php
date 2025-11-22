@@ -92,6 +92,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($access_value)) {
                 $access_type = 'public';
             }
+        } elseif ($access_type === 'payment') {
+            $access_value = $_POST['access_price'] ?? 0;
+            if (empty($access_value) || floatval($access_value) <= 0) {
+                // If price is not set or invalid, maybe revert to public or show error?
+                // For simplicity, let's assume it's allowed but usually price should be > 0
+                $access_value = 0;
+            }
         }
 
         if (update_wall_access($wall_id, $access_type, $access_value)) {
@@ -291,6 +298,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
                 <option value="public" <?= $wall['access_control']['type'] === 'public' ? 'selected' : '' ?>>Public</option>
                 <option value="password" <?= $wall['access_control']['type'] === 'password' ? 'selected' : '' ?>>Password / Code</option>
                 <option value="codelist" <?= $wall['access_control']['type'] === 'codelist' ? 'selected' : '' ?>>Codelist (Multiple Codes)</option>
+                <option value="payment" <?= $wall['access_control']['type'] === 'payment' ? 'selected' : '' ?>>Payment (Stripe)</option>
             </select>
 
             <div id="password_input" style="display: none; margin-top: 10px;">
@@ -308,6 +316,11 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
                 ?></textarea>
             </div>
 
+            <div id="payment_input" style="display: none; margin-top: 10px;">
+                <label for="access_price">Price (USD):</label>
+                <input type="number" name="access_price" id="access_price" step="0.01" min="0.50" placeholder="5.00" value="<?= htmlspecialchars($wall['access_control']['payment']['price'] ?? '') ?>">
+            </div>
+
             <button type="submit" name="update_access" style="margin-top: 10px;">Update Access Control</button>
         </form>
 
@@ -316,6 +329,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
                 var type = document.getElementById('access_type').value;
                 document.getElementById('password_input').style.display = (type === 'password') ? 'block' : 'none';
                 document.getElementById('codelist_input').style.display = (type === 'codelist') ? 'block' : 'none';
+                document.getElementById('payment_input').style.display = (type === 'payment') ? 'block' : 'none';
             }
             // Run on page load to set initial state
             toggleAccessInputs();
