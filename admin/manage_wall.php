@@ -4,6 +4,8 @@ ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../app/core/functions.php';
 
+require_login();
+
 // --- Authentication and Initialization ---
 $wall_id = $_GET['wall_id'] ?? null;
 if (!$wall_id) {
@@ -263,16 +265,19 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 </head>
 <body>
     <div class="container">
-        <p class="breadcrumb">
-            <a href="index.php">Admin Home</a> &raquo;
-            <?php if ($building): ?>
-                <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a> &raquo;
-            <?php endif; ?>
-            <?php if ($side): ?>
-                <a href="manage_side.php?side_id=<?= htmlspecialchars($side['id']) ?>"><?= htmlspecialchars($side['name']) ?></a> &raquo;
-            <?php endif; ?>
-            Manage Wall
-        </p>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <p class="breadcrumb">
+                <a href="index.php">Admin Home</a> &raquo;
+                <?php if ($building): ?>
+                    <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a> &raquo;
+                <?php endif; ?>
+                <?php if ($side): ?>
+                    <a href="manage_side.php?side_id=<?= htmlspecialchars($side['id']) ?>"><?= htmlspecialchars($side['name']) ?></a> &raquo;
+                <?php endif; ?>
+                Manage Wall
+            </p>
+            <a href="logout.php" style="color: #e74c3c; text-decoration: none; font-weight: bold;">Logout</a>
+        </div>
         <h1>Manage Links for "<?= htmlspecialchars($wall['name']) ?>"</h1>
 
         <?php if ($success_message): ?><div class="message success"><?= htmlspecialchars($success_message) ?></div><?php endif; ?>

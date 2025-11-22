@@ -4,6 +4,8 @@ ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../app/core/functions.php';
 
+require_login();
+
 // --- Authentication and Initialization ---
 $side_id = $_GET['side_id'] ?? null;
 if (!$side_id) {
@@ -96,11 +98,14 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 </head>
 <body>
     <div class="container">
-        <p class="breadcrumb">
-            <a href="index.php">Admin Home</a> &raquo;
-            <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a> &raquo;
-            Manage Side
-        </p>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <p class="breadcrumb">
+                <a href="index.php">Admin Home</a> &raquo;
+                <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a> &raquo;
+                Manage Side
+            </p>
+            <a href="logout.php" style="color: #e74c3c; text-decoration: none; font-weight: bold;">Logout</a>
+        </div>
         <h1>Manage Walls for "<?= htmlspecialchars($side['name']) ?>"</h1>
 
         <?php if ($success_message): ?>

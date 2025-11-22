@@ -8,6 +8,8 @@ ini_set('display_errors', 1);
 // Include the core functions file
 require_once __DIR__ . '/../app/core/functions.php';
 
+require_login();
+
 $error_message = '';
 $success_message = '';
 
@@ -90,7 +92,10 @@ if(isset($_GET['delete']) && $_GET['delete'] == 'success') {
 </head>
 <body>
     <div class="container">
-        <h1>Manage Buildings</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Manage Buildings</h1>
+            <a href="logout.php" style="color: #e74c3c; text-decoration: none; font-weight: bold;">Logout</a>
+        </div>
 
         <?php if ($success_message): ?>
             <div class="message success"><?= htmlspecialchars($success_message) ?></div>

@@ -4,6 +4,63 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/encryption.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// --- Auth Functions ---
+
+/**
+ * Logs in a user.
+ *
+ * @param string $username
+ * @param string $password
+ * @return bool True on success, false on failure.
+ */
+function login_user($username, $password) {
+    $db = get_db();
+    $users = $db['users'] ?? [];
+
+    foreach ($users as $user) {
+        if ($user['username'] === $username) {
+            // Verify password
+            $salt = $user['salt'] ?? '';
+            if (verify_password($password, $user['password_hash'], $salt)) {
+                $_SESSION['user_id'] = $user['username']; // Simple session user ID
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Checks if a user is logged in.
+ *
+ * @return bool
+ */
+function is_logged_in() {
+    return isset($_SESSION['user_id']);
+}
+
+/**
+ * Logs out the current user.
+ */
+function logout_user() {
+    unset($_SESSION['user_id']);
+    session_destroy();
+}
+
+/**
+ * Requires a user to be logged in. If not, redirects to login page.
+ */
+function require_login() {
+    if (!is_logged_in()) {
+        header('Location: login.php');
+        exit;
+    }
+}
+
 // --- Building Functions ---
 
 /**
