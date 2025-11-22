@@ -4,3 +4,11 @@ config.php
 
 # Dependencies
 /vendor/
+
+# Data
+data/database.json
+data/installed.lock
+
+# Logs and Testing
+php_server.log
+verification/

@@ -10,22 +10,49 @@ $success_message = '';
 $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $new_settings = [
-        'site_title' => $_POST['site_title'] ?? 'Link-Wall-It',
-        'site_description' => $_POST['site_description'] ?? '',
-        'stripe_publishable_key' => $_POST['stripe_publishable_key'] ?? '',
-        'stripe_secret_key' => $_POST['stripe_secret_key'] ?? '',
-    ];
 
-    // Preserve other settings if any (merge)
-    // We merge new over old to update
-    $db['settings'] = array_merge($settings, $new_settings);
+    if (isset($_POST['update_settings'])) {
+        $new_settings = [
+            'site_title' => $_POST['site_title'] ?? 'Link-Wall-It',
+            'site_description' => $_POST['site_description'] ?? '',
+            'stripe_publishable_key' => $_POST['stripe_publishable_key'] ?? '',
+            'stripe_secret_key' => $_POST['stripe_secret_key'] ?? '',
+        ];
 
-    if (save_db($db)) {
-        $success_message = 'Settings updated successfully!';
-        $settings = $db['settings']; // Refresh from memory
-    } else {
-        $error_message = 'Failed to update settings.';
+        // Preserve other settings if any (merge)
+        // We merge new over old to update
+        $db['settings'] = array_merge($settings, $new_settings);
+
+        if (save_db($db)) {
+            $success_message = 'Settings updated successfully!';
+            $settings = $db['settings']; // Refresh from memory
+        } else {
+            $error_message = 'Failed to update settings.';
+        }
+    } elseif (isset($_POST['change_password'])) {
+        $current_password = $_POST['current_password'] ?? '';
+        $new_password = $_POST['new_password'] ?? '';
+        $confirm_password = $_POST['confirm_password'] ?? '';
+
+        // Get current user
+        $username = $_SESSION['user_id']; // Assuming simple username storage
+
+        // Validate current password
+        if (login_user($username, $current_password)) {
+            if (empty($new_password)) {
+                $error_message = 'New password cannot be empty.';
+            } elseif ($new_password !== $confirm_password) {
+                $error_message = 'New passwords do not match.';
+            } else {
+                if (update_user_password($username, $new_password)) {
+                    $success_message = 'Password changed successfully!';
+                } else {
+                    $error_message = 'Failed to update password.';
+                }
+            }
+        } else {
+            $error_message = 'Incorrect current password.';
+        }
     }
 }
 ?>
@@ -82,7 +109,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="stripe_secret_key">Secret Key</label>
             <input type="text" name="stripe_secret_key" id="stripe_secret_key" value="<?= htmlspecialchars($settings['stripe_secret_key'] ?? '') ?>" placeholder="sk_test_...">
 
-            <button type="submit">Save Settings</button>
+            <button type="submit" name="update_settings">Save Settings</button>
+        </form>
+
+        <hr style="margin: 40px 0; border: 0; border-top: 1px solid #eee;">
+
+        <form method="post">
+            <h2>Change Password</h2>
+            <label for="current_password">Current Password</label>
+            <input type="password" name="current_password" id="current_password" required>
+
+            <label for="new_password">New Password</label>
+            <input type="password" name="new_password" id="new_password" required>
+
+            <label for="confirm_password">Confirm New Password</label>
+            <input type="password" name="confirm_password" id="confirm_password" required>
+
+            <button type="submit" name="change_password" style="background-color: #e67e22;">Change Password</button>
         </form>
     </div>
 </body>

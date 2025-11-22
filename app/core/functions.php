@@ -72,6 +72,32 @@ function require_login() {
     }
 }
 
+/**
+ * Updates a user's password.
+ *
+ * @param string $username The username of the user.
+ * @param string $new_password The new password.
+ * @return bool True on success, false on failure.
+ */
+function update_user_password($username, $new_password) {
+    $db = get_db();
+    $found = false;
+    foreach ($db['users'] as &$user) {
+        if ($user['username'] === $username) {
+            $password_data = hash_password($new_password);
+            $user['password_hash'] = $password_data['hash'];
+            $user['salt'] = $password_data['salt'];
+            $found = true;
+            break;
+        }
+    }
+
+    if ($found) {
+        return save_db($db);
+    }
+    return false;
+}
+
 // --- Building Functions ---
 
 /**

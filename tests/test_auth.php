@@ -6,6 +6,24 @@ echo "Testing Auth...\n";
 // Test correct login
 if (login_user('admin', 'admin')) {
     echo "Login success: PASS\n";
+
+    // Test Change Password
+    if (update_user_password('admin', 'newpass')) {
+        echo "Update Password: PASS\n";
+    } else {
+        echo "Update Password: FAIL\n";
+    }
+
+    // Verify new login
+    if (login_user('admin', 'newpass')) {
+        echo "Login with new pass: PASS\n";
+    } else {
+        echo "Login with new pass: FAIL\n";
+    }
+
+    // Revert password for other tests
+    update_user_password('admin', 'admin');
+
 } else {
     echo "Login success: FAIL\n";
     // Debug: check if user exists
