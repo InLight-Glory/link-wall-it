@@ -17,6 +17,7 @@ $success_message = '';
 
 // Check if the request is a POST request
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf();
 
     // Handle 'Create Building' action
     if (isset($_POST['create_building']) && !empty($_POST['building_name'])) {
@@ -38,16 +39,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-}
-
-// Handle 'Delete Building' action from GET request
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    if (delete_building($_GET['id'])) {
-        header('Location: index.php?delete=success');
-        exit;
-    } else {
-        $error_message = 'Failed to delete building.';
+    // Handle 'Delete Building' action
+    elseif (isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['id'])) {
+        if (delete_building($_POST['id'])) {
+            header('Location: index.php?delete=success');
+            exit;
+        } else {
+            $error_message = 'Failed to delete building.';
+        }
     }
+
 }
 
 // --- Data Retrieval for Display ---
@@ -109,6 +110,7 @@ if(isset($_GET['delete']) && $_GET['delete'] == 'success') {
 
         <!-- Form to create a new building -->
         <form action="index.php" method="post">
+            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <h2>Create New Building</h2>
             <input type="text" name="building_name" placeholder="Enter building name" required>
             <button type="submit" name="create_building">Create Building</button>
@@ -132,6 +134,7 @@ if(isset($_GET['delete']) && $_GET['delete'] == 'success') {
                         <?php if ($is_editing): ?>
                             <!-- Edit form -->
                             <form action="index.php" method="post" style="width: 100%;">
+                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                                 <input type="hidden" name="building_id" value="<?= htmlspecialchars($building['id']) ?>">
                                 <input type="text" name="building_name" value="<?= htmlspecialchars($building['name']) ?>" required>
                                 <button type="submit" name="update_building">Update</button>
@@ -146,7 +149,12 @@ if(isset($_GET['delete']) && $_GET['delete'] == 'success') {
                             <span class="building-actions">
                                 <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>">Manage Sides</a>
                                 <a href="index.php?action=edit&id=<?= htmlspecialchars($building['id']) ?>">Edit Name</a>
-                                <a href="index.php?action=delete&id=<?= htmlspecialchars($building['id']) ?>" class="delete" onclick="return confirm('Are you sure you want to delete this building and all its contents?');">Delete</a>
+                                <form action="index.php" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this building and all its contents?');">
+                                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars($building['id']) ?>">
+                                    <button type="submit" class="delete" style="background:none; border:none; color:#e74c3c; cursor:pointer; padding:0; font:inherit; text-decoration:underline; margin-left: 15px;">Delete</button>
+                                </form>
                             </span>
                         <?php endif; ?>
                     </div>

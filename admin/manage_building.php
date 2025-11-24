@@ -24,6 +24,8 @@ $success_message = '';
 
 // --- Form Handling ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf();
+
     // Handle 'Create Side'
     if (isset($_POST['create_side']) && !empty($_POST['side_name'])) {
         $result = create_side($building_id, $_POST['side_name']);
@@ -42,15 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error_message = 'Failed to update side.';
         }
     }
-}
 
-// Handle 'Delete Side'
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    if (delete_side($_GET['id'])) {
-        header('Location: manage_building.php?building_id=' . $building_id . '&delete=success');
-        exit;
-    } else {
-        $error_message = 'Failed to delete side.';
+    // Handle 'Delete Side'
+    elseif (isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['id'])) {
+        if (delete_side($_POST['id'])) {
+            header('Location: manage_building.php?building_id=' . $building_id . '&delete=success');
+            exit;
+        } else {
+            $error_message = 'Failed to delete side.';
+        }
     }
 }
 
@@ -111,6 +113,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
         <!-- Form to create a new side -->
         <?php if (count($sides) < 4): ?>
             <form action="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>" method="post">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                 <h2>Create New Side</h2>
                 <input type="text" name="side_name" placeholder="Enter side name" required>
                 <button type="submit" name="create_side">Create Side</button>
@@ -136,6 +139,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 
                         <?php if ($is_editing): ?>
                             <form action="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>" method="post" style="width: 100%;">
+                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                                 <input type="hidden" name="side_id" value="<?= htmlspecialchars($side['id']) ?>">
                                 <input type="text" name="side_name" value="<?= htmlspecialchars($side['name']) ?>" required>
                                 <button type="submit" name="update_side">Update</button>
@@ -149,7 +153,12 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
                             <span class="item-actions">
                                 <a href="manage_side.php?side_id=<?= htmlspecialchars($side['id']) ?>">Manage Walls</a>
                                 <a href="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>&action=edit&id=<?= htmlspecialchars($side['id']) ?>">Edit Name</a>
-                                <a href="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>&action=delete&id=<?= htmlspecialchars($side['id']) ?>" class="delete" onclick="return confirm('Are you sure you want to delete this side and all its contents?');">Delete</a>
+                                <form action="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this side and all its contents?');">
+                                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars($side['id']) ?>">
+                                    <button type="submit" class="delete" style="background:none; border:none; color:#e74c3c; cursor:pointer; padding:0; font:inherit; text-decoration:underline; margin-left: 15px;">Delete</button>
+                                </form>
                             </span>
                         <?php endif; ?>
                     </div>

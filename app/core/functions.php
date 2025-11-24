@@ -3,6 +3,7 @@
 // Require helper files
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/encryption.php';
+require_once __DIR__ . '/csrf.php';
 
 // Check installation status
 $lock_file = __DIR__ . '/../../data/installed.lock';

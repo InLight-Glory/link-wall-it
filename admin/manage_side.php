@@ -27,6 +27,8 @@ $success_message = '';
 
 // --- Form Handling ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf();
+
     // Handle 'Create Wall'
     if (isset($_POST['create_wall']) && !empty($_POST['wall_name'])) {
         if (create_wall($side_id, $_POST['wall_name'])) {
@@ -44,15 +46,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error_message = 'Failed to update wall.';
         }
     }
-}
 
-// Handle 'Delete Wall'
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    if (delete_wall($_GET['id'])) {
-        header('Location: manage_side.php?side_id=' . $side_id . '&delete=success');
-        exit;
-    } else {
-        $error_message = 'Failed to delete wall.';
+    // Handle 'Delete Wall'
+    elseif (isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['id'])) {
+        if (delete_wall($_POST['id'])) {
+            header('Location: manage_side.php?side_id=' . $side_id . '&delete=success');
+            exit;
+        } else {
+            $error_message = 'Failed to delete wall.';
+        }
     }
 }
 
@@ -117,6 +119,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 
         <!-- Form to create a new wall -->
         <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post">
+            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <h2>Create New Wall</h2>
             <input type="text" name="wall_name" placeholder="Enter wall name" required>
             <button type="submit" name="create_wall">Create Wall</button>
@@ -138,6 +141,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 
                         <?php if ($is_editing): ?>
                             <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post" style="width: 100%;">
+                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                                 <input type="hidden" name="wall_id" value="<?= htmlspecialchars($wall['id']) ?>">
                                 <input type="text" name="wall_name" value="<?= htmlspecialchars($wall['name']) ?>" required>
                                 <button type="submit" name="update_wall">Update</button>
@@ -151,7 +155,12 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
                             <span class="item-actions">
                                 <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall['id']) ?>">Manage Links</a>
                                 <a href="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>&action=edit&id=<?= htmlspecialchars($wall['id']) ?>">Edit Name</a>
-                                <a href="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>&action=delete&id=<?= htmlspecialchars($wall['id']) ?>" class="delete" onclick="return confirm('Are you sure you want to delete this wall and all its contents?');">Delete</a>
+                                <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this wall and all its contents?');">
+                                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars($wall['id']) ?>">
+                                    <button type="submit" class="delete" style="background:none; border:none; color:#e74c3c; cursor:pointer; padding:0; font:inherit; text-decoration:underline; margin-left: 15px;">Delete</button>
+                                </form>
                             </span>
                         <?php endif; ?>
                     </div>

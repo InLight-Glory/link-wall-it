@@ -10,6 +10,7 @@ $success_message = '';
 $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf();
 
     if (isset($_POST['update_settings'])) {
         $new_settings = [
@@ -90,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($error_message): ?><div class="message error"><?= htmlspecialchars($error_message) ?></div><?php endif; ?>
 
         <form method="post">
+            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <h2>General Information</h2>
 
             <label for="site_title">Site Title</label>
@@ -115,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <hr style="margin: 40px 0; border: 0; border-top: 1px solid #eee;">
 
         <form method="post">
+            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <h2>Change Password</h2>
             <label for="current_password">Current Password</label>
             <input type="password" name="current_password" id="current_password" required>

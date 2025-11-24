@@ -71,6 +71,7 @@ function handle_image_upload($file_input_name) {
 
 // --- Form Handling ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf();
 
     // Handle 'Update Access Control'
     if (isset($_POST['update_access'])) {
@@ -220,15 +221,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-}
 
-// Handle 'Delete Link'
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    if (delete_link($_GET['id'])) {
-        header('Location: manage_wall.php?wall_id=' . $wall_id . '&delete=success');
-        exit;
-    } else {
-        $error_message = 'Failed to delete link.';
+    // Handle 'Delete Link'
+    elseif (isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['id'])) {
+        if (delete_link($_POST['id'])) {
+            header('Location: manage_wall.php?wall_id=' . $wall_id . '&delete=success');
+            exit;
+        } else {
+            $error_message = 'Failed to delete link.';
+        }
     }
 }
 
@@ -293,6 +294,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
         <hr>
         <h2>Wall Security</h2>
         <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post">
+            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <label for="access_type">Access Type:</label>
             <select name="access_type" id="access_type" onchange="toggleAccessInputs()">
                 <option value="public" <?= $wall['access_control']['type'] === 'public' ? 'selected' : '' ?>>Public</option>
@@ -337,6 +339,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
         <hr>
 
         <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
             <h2>Create New Link</h2>
             <?php if ($wall['access_control']['type'] === 'password'): ?>
                 <p style="color: #c0392b; font-weight: bold;">This wall is password protected. You must enter the wall's password to encrypt and save new links.</p>
@@ -365,6 +368,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 
                         <?php if ($is_editing): ?>
                             <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data" style="width: 100%;">
+                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                                 <input type="hidden" name="link_id" value="<?= htmlspecialchars($link['id']) ?>">
 
                                 <?php if ($wall['access_control']['type'] === 'password'): ?>
@@ -405,7 +409,12 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
                             </span>
                             <span class="item-actions">
                                 <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>&action=edit&id=<?= htmlspecialchars($link['id']) ?>">Edit</a>
-                                <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>&action=delete&id=<?= htmlspecialchars($link['id']) ?>" class="delete" onclick="return confirm('Are you sure?');">Delete</a>
+                                <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" style="display:inline;" onsubmit="return confirm('Are you sure?');">
+                                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars($link['id']) ?>">
+                                    <button type="submit" class="delete" style="background:none; border:none; color:#e74c3c; cursor:pointer; padding:0; font:inherit; text-decoration:underline; margin-left: 15px;">Delete</button>
+                                </form>
                             </span>
                         <?php endif; ?>
                     </div>
