@@ -47,7 +47,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Login</button>
         </form>
-        <p style="text-align: center; margin-top: 20px; font-size: 0.9em;"><a href="../index.php" style="color: #7f8c8d; text-decoration: none;">&larr; Back to Site</a></p>
+        <p style="text-align: center; margin-top: 20px; font-size: 0.9em;">
+            <a href="recover.php" style="color: #3498db; text-decoration: none;">Forgot Password?</a>
+            <br><br>
+            <a href="../index.php" style="color: #7f8c8d; text-decoration: none;">&larr; Back to Site</a>
+        </p>
     </div>
 </body>
 </html>

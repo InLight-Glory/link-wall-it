@@ -12,9 +12,11 @@ if (file_exists(LOCK_FILE)) {
 }
 
 require_once __DIR__ . '/app/core/encryption.php';
+require_once __DIR__ . '/app/core/mnemonic.php';
 
 $error = '';
 $success = '';
+$recovery_phrase = '';
 
 // 2. Handle Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,6 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Hash password
             $password_data = hash_password($password);
 
+            // Generate Recovery Phrase
+            $recovery_phrase = generate_recovery_phrase();
+            $recovery_data = hash_password($recovery_phrase);
+
             // Create Initial Database
             $initial_db = [
                 "settings" => [
@@ -47,7 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     [
                         "username" => htmlspecialchars($username, ENT_QUOTES, 'UTF-8'),
                         "password_hash" => $password_data['hash'],
-                        "salt" => $password_data['salt']
+                        "salt" => $password_data['salt'],
+                        "recovery_hash" => $recovery_data['hash'],
+                        "recovery_salt" => $recovery_data['salt']
                     ]
                 ],
                 "buildings" => [],
@@ -100,6 +108,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="success">
                 <h2>Installation Successful!</h2>
                 <p>Link-Wall-It has been installed and configured.</p>
+
+                <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 4px; border: 1px solid #ffeeba; margin: 20px 0; text-align: left;">
+                    <strong>⚠️ IMPORTANT: SAVE THIS RECOVERY PHRASE</strong>
+                    <p>This is the ONLY way to recover your account if you lose your password. Copy it and store it in a safe place.</p>
+                    <textarea readonly style="width: 100%; height: 60px; margin-top: 10px; font-family: monospace; padding: 10px;"><?= htmlspecialchars($recovery_phrase) ?></textarea>
+                </div>
+
                 <p>You can now log in to the administration panel.</p>
                 <a href="admin/login.php" class="btn-admin">Go to Admin Panel</a>
             </div>
