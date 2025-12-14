@@ -4,6 +4,39 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/encryption.php';
 
+// --- Feedback Functions ---
+
+/**
+ * Saves feedback for a specific entity.
+ *
+ * @param string $type The type of entity ('side', 'list', 'link').
+ * @param string $reference_id The ID of the entity.
+ * @param string $content The feedback content.
+ * @return bool True on success.
+ */
+function save_feedback($type, $reference_id, $content) {
+    $db = get_db();
+    $new_feedback = [
+        'id' => 'f_' . uniqid(),
+        'type' => $type,
+        'reference_id' => $reference_id,
+        'content' => htmlspecialchars($content, ENT_QUOTES, 'UTF-8'),
+        'timestamp' => time()
+    ];
+    $db['feedback'][] = $new_feedback;
+    return save_db($db);
+}
+
+/**
+ * Retrieves all feedback.
+ *
+ * @return array List of feedback items.
+ */
+function get_all_feedback() {
+    $db = get_db();
+    return $db['feedback'] ?? [];
+}
+
 // --- Building Functions ---
 
 /**
@@ -452,13 +485,10 @@ function delete_wall($id) {
 // --- Link Functions ---
 
 /**
- * Creates a new link for a given wall.
+ * Creates a new link or instruction for a given wall (list).
  *
  * @param string $wall_id The ID of the parent wall.
- * @param string $title The title of the link.
- * @param string $url The URL of the link.
- * @param string $description (Optional) A description for the link.
- * @param string $image (Optional) An image URL for the link.
+ * @param array $link_data Data including type, title, url, description/content, etc.
  * @return string|bool The new link's ID on success, false on failure.
  */
 function create_link(string $wall_id, array $link_data): string|false {
@@ -469,13 +499,27 @@ function create_link(string $wall_id, array $link_data): string|false {
         return false;
     }
 
+    // Determine position (append to end)
+    $max_pos = 0;
+    foreach ($db['links'] ?? [] as $l) {
+        if ($l['wall_id'] === $wall_id) {
+            $pos = $l['position'] ?? 0;
+            if ($pos > $max_pos) {
+                $max_pos = $pos;
+            }
+        }
+    }
+
     $new_link = [
         'id' => 'l_' . uniqid(),
         'wall_id' => $wall_id,
-        'title' => $link_data['title'],
-        'url' => $link_data['url'],
-        'description' => $link_data['description'],
-        'image' => $link_data['image'],
+        'type' => $link_data['type'] ?? 'link', // 'link' or 'instruction'
+        'title' => $link_data['title'] ?? '',
+        'url' => $link_data['url'] ?? '',
+        'description' => $link_data['description'] ?? '',
+        'content' => $link_data['content'] ?? '', // For instructions
+        'image' => $link_data['image'] ?? null,
+        'position' => $max_pos + 1
     ];
 
     $db['links'][] = $new_link;
@@ -487,7 +531,7 @@ function create_link(string $wall_id, array $link_data): string|false {
 }
 
 /**
- * Retrieves all links for a specific wall.
+ * Retrieves all links/instructions for a specific wall, sorted by position.
  *
  * @param string $wall_id The ID of the wall.
  * @return array A list of link records.
@@ -497,9 +541,19 @@ function get_links_for_wall($wall_id) {
     $links_for_wall = [];
     foreach ($db['links'] ?? [] as $link) {
         if ($link['wall_id'] === $wall_id) {
+            // Ensure position exists for backward compatibility
+            if (!isset($link['position'])) {
+                $link['position'] = 0;
+            }
             $links_for_wall[] = $link;
         }
     }
+
+    // Sort by position
+    usort($links_for_wall, function($a, $b) {
+        return $a['position'] <=> $b['position'];
+    });
+
     return $links_for_wall;
 }
 
@@ -523,10 +577,7 @@ function get_link($id) {
  * Updates a link's details.
  *
  * @param string $id The ID of the link to update.
- * @param string $title The new title.
- * @param string $url The new URL.
- * @param string $description The new description.
- * @param string $image The new image URL.
+ * @param array $link_data The new data.
  * @return bool True on success, false on failure.
  */
 function update_link(string $id, array $link_data): bool {
@@ -535,10 +586,14 @@ function update_link(string $id, array $link_data): bool {
 
     foreach ($db['links'] as &$link) {
         if ($link['id'] === $id) {
-            $link['title'] = $link_data['title'];
-            $link['url'] = $link_data['url'];
-            $link['description'] = $link_data['description'];
-            // Only update image if it's provided, to not overwrite it with null
+            // Update fields if present in $link_data
+            if (isset($link_data['title'])) $link['title'] = $link_data['title'];
+            if (isset($link_data['url'])) $link['url'] = $link_data['url'];
+            if (isset($link_data['description'])) $link['description'] = $link_data['description'];
+            if (isset($link_data['content'])) $link['content'] = $link_data['content'];
+            if (isset($link_data['type'])) $link['type'] = $link_data['type'];
+
+            // Only update image if it's provided
             if (isset($link_data['image'])) {
                 $link['image'] = $link_data['image'];
             }
@@ -552,6 +607,81 @@ function update_link(string $id, array $link_data): bool {
     }
 
     return false;
+}
+
+/**
+ * Moves a link up or down in the list.
+ *
+ * @param string $link_id The ID of the link to move.
+ * @param string $direction 'up' or 'down'.
+ * @return bool True on success.
+ */
+function move_link(string $link_id, string $direction) {
+    $db = get_db();
+
+    // Find target link
+    $target_link_key = null;
+    $wall_id = null;
+    foreach ($db['links'] as $key => $link) {
+        if ($link['id'] === $link_id) {
+            $target_link_key = $key;
+            $wall_id = $link['wall_id'];
+            break;
+        }
+    }
+
+    if ($target_link_key === null) return false;
+
+    // Get all links for this wall with their keys
+    $wall_links = [];
+    foreach ($db['links'] as $key => $link) {
+        if ($link['wall_id'] === $wall_id) {
+            $link['__key'] = $key;
+            if (!isset($link['position'])) $link['position'] = 0;
+            $wall_links[] = $link;
+        }
+    }
+
+    // Sort by position
+    usort($wall_links, function($a, $b) {
+        return $a['position'] <=> $b['position'];
+    });
+
+    // Re-normalize positions (0, 1, 2...) to ensure continuity
+    foreach ($wall_links as $index => &$link) {
+        $link['position'] = $index;
+    }
+    unset($link);
+
+    // Find index of target link in sorted array
+    $target_index = -1;
+    foreach ($wall_links as $index => $link) {
+        if ($link['id'] === $link_id) {
+            $target_index = $index;
+            break;
+        }
+    }
+
+    if ($target_index === -1) return false;
+
+    // Swap positions
+    if ($direction === 'up' && $target_index > 0) {
+        $wall_links[$target_index]['position']--;
+        $wall_links[$target_index - 1]['position']++;
+    } elseif ($direction === 'down' && $target_index < count($wall_links) - 1) {
+        $wall_links[$target_index]['position']++;
+        $wall_links[$target_index + 1]['position']--;
+    } else {
+        return false; // Cannot move further
+    }
+
+    // Update the main DB array
+    foreach ($wall_links as $link) {
+        $original_key = $link['__key'];
+        $db['links'][$original_key]['position'] = $link['position'];
+    }
+
+    return save_db($db);
 }
 
 /**

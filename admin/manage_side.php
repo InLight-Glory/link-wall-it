@@ -25,32 +25,32 @@ $success_message = '';
 
 // --- Form Handling ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Handle 'Create Wall'
+    // Handle 'Create List'
     if (isset($_POST['create_wall']) && !empty($_POST['wall_name'])) {
         if (create_wall($side_id, $_POST['wall_name'])) {
-            $success_message = 'Wall created successfully!';
+            $success_message = 'List created successfully!';
         } else {
-            $error_message = 'Failed to create wall.';
+            $error_message = 'Failed to create list.';
         }
     }
-    // Handle 'Update Wall'
+    // Handle 'Update List'
     elseif (isset($_POST['update_wall']) && !empty($_POST['wall_name']) && !empty($_POST['wall_id'])) {
         if (update_wall($_POST['wall_id'], $_POST['wall_name'])) {
             header('Location: manage_side.php?side_id=' . $side_id . '&update=success');
             exit;
         } else {
-            $error_message = 'Failed to update wall.';
+            $error_message = 'Failed to update list.';
         }
     }
 }
 
-// Handle 'Delete Wall'
+// Handle 'Delete List'
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     if (delete_wall($_GET['id'])) {
         header('Location: manage_side.php?side_id=' . $side_id . '&delete=success');
         exit;
     } else {
-        $error_message = 'Failed to delete wall.';
+        $error_message = 'Failed to delete list.';
     }
 }
 
@@ -58,10 +58,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 $walls = get_walls_for_side($side_id);
 
 if (isset($_GET['update']) && $_GET['update'] == 'success') {
-    $success_message = 'Wall updated successfully!';
+    $success_message = 'List updated successfully!';
 }
 if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
-    $success_message = 'Wall deleted successfully!';
+    $success_message = 'List deleted successfully!';
 }
 
 ?>
@@ -70,7 +70,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Walls for <?= htmlspecialchars($side['name']) ?></title>
+    <title>Manage Lists for <?= htmlspecialchars($side['name']) ?></title>
     <!-- Re-using the same stylesheet as it's generic enough -->
     <link rel="stylesheet" href="manage_building.css">
     <style>
@@ -101,7 +101,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
             <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a> &raquo;
             Manage Side
         </p>
-        <h1>Manage Walls for "<?= htmlspecialchars($side['name']) ?>"</h1>
+        <h1>Manage Lists for "<?= htmlspecialchars($side['name']) ?>"</h1>
 
         <?php if ($success_message): ?>
             <div class="message success"><?= htmlspecialchars($success_message) ?></div>
@@ -110,20 +110,20 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
             <div class="message error"><?= htmlspecialchars($error_message) ?></div>
         <?php endif; ?>
 
-        <!-- Form to create a new wall -->
+        <!-- Form to create a new list -->
         <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post">
-            <h2>Create New Wall</h2>
-            <input type="text" name="wall_name" placeholder="Enter wall name" required>
-            <button type="submit" name="create_wall">Create Wall</button>
+            <h2>Create New List</h2>
+            <input type="text" name="wall_name" placeholder="Enter list name" required>
+            <button type="submit" name="create_wall">Create List</button>
         </form>
 
         <hr>
 
-        <!-- List of existing walls -->
-        <h2>Existing Walls</h2>
+        <!-- List of existing lists -->
+        <h2>Existing Lists</h2>
         <div class="item-list">
             <?php if (empty($walls)): ?>
-                <p>No walls found. Create one above!</p>
+                <p>No lists found. Create one above!</p>
             <?php else: ?>
                 <?php foreach ($walls as $wall): ?>
                     <div class="item">
@@ -144,9 +144,9 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
                                 <small>(ID: <?= htmlspecialchars($wall['id']) ?>)</small>
                             </span>
                             <span class="item-actions">
-                                <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall['id']) ?>">Manage Links</a>
+                                <a href="manage_list.php?wall_id=<?= htmlspecialchars($wall['id']) ?>">Manage Content</a>
                                 <a href="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>&action=edit&id=<?= htmlspecialchars($wall['id']) ?>">Edit Name</a>
-                                <a href="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>&action=delete&id=<?= htmlspecialchars($wall['id']) ?>" class="delete" onclick="return confirm('Are you sure you want to delete this wall and all its contents?');">Delete</a>
+                                <a href="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>&action=delete&id=<?= htmlspecialchars($wall['id']) ?>" class="delete" onclick="return confirm('Are you sure you want to delete this list and all its contents?');">Delete</a>
                             </span>
                         <?php endif; ?>
                     </div>
