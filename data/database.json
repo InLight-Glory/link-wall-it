@@ -9,8 +9,241 @@
             "password_hash": ""
         }
     ],
-    "buildings": [],
-    "sides": [],
-    "walls": [],
-    "links": []
+    "buildings": [
+        {
+            "id": "b_693ea8e682b9b",
+            "name": "Test Building"
+        },
+        {
+            "id": "b_693ea8f83d1b0",
+            "name": "Test Building"
+        },
+        {
+            "id": "b_693ea915364c3",
+            "name": "Test Building"
+        },
+        {
+            "id": "b_693ea9240377a",
+            "name": "Test Building"
+        },
+        {
+            "id": "b_693ea942550db",
+            "name": "Test Building"
+        }
+    ],
+    "sides": [
+        {
+            "id": "s_693ea8e682cbd",
+            "building_id": "b_693ea8e682b9b",
+            "name": "Test Side"
+        },
+        {
+            "id": "s_693ea8f83d2c7",
+            "building_id": "b_693ea8f83d1b0",
+            "name": "Test Side"
+        },
+        {
+            "id": "s_693ea915365e7",
+            "building_id": "b_693ea915364c3",
+            "name": "Test Side"
+        },
+        {
+            "id": "s_693ea924038c6",
+            "building_id": "b_693ea9240377a",
+            "name": "Test Side"
+        },
+        {
+            "id": "s_693ea94255263",
+            "building_id": "b_693ea942550db",
+            "name": "Test Side"
+        }
+    ],
+    "walls": [
+        {
+            "id": "w_693ea8e682e78",
+            "side_id": "s_693ea8e682cbd",
+            "name": "Test List",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": []
+            }
+        },
+        {
+            "id": "w_693ea8f83d451",
+            "side_id": "s_693ea8f83d2c7",
+            "name": "Test List",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": []
+            }
+        },
+        {
+            "id": "w_693ea91536793",
+            "side_id": "s_693ea915365e7",
+            "name": "Test List",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": []
+            }
+        },
+        {
+            "id": "w_693ea92403ad5",
+            "side_id": "s_693ea924038c6",
+            "name": "Test List",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": []
+            }
+        },
+        {
+            "id": "w_693ea942553a9",
+            "side_id": "s_693ea94255263",
+            "name": "Test List",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": []
+            }
+        }
+    ],
+    "links": [
+        {
+            "id": "l_693ea8e682fb9",
+            "wall_id": "w_693ea8e682e78",
+            "type": "link",
+            "title": "Link 1",
+            "url": "http:\/\/example.com",
+            "description": "",
+            "content": "",
+            "image": null,
+            "position": 1
+        },
+        {
+            "id": "l_693ea8e6830a9",
+            "wall_id": "w_693ea8e682e78",
+            "type": "instruction",
+            "title": "",
+            "url": "",
+            "description": "",
+            "content": "Instruction 1",
+            "image": null,
+            "position": 2
+        },
+        {
+            "id": "l_693ea8f83d573",
+            "wall_id": "w_693ea8f83d451",
+            "type": "link",
+            "title": "Link 1",
+            "url": "http:\/\/example.com",
+            "description": "",
+            "content": "",
+            "image": null,
+            "position": 1
+        },
+        {
+            "id": "l_693ea8f83d684",
+            "wall_id": "w_693ea8f83d451",
+            "type": "instruction",
+            "title": "",
+            "url": "",
+            "description": "",
+            "content": "Instruction 1",
+            "image": null,
+            "position": 2
+        },
+        {
+            "id": "l_693ea9153686d",
+            "wall_id": "w_693ea91536793",
+            "type": "link",
+            "title": "Link 1",
+            "url": "http:\/\/example.com",
+            "description": "",
+            "content": "",
+            "image": null,
+            "position": 1
+        },
+        {
+            "id": "l_693ea91536966",
+            "wall_id": "w_693ea91536793",
+            "type": "instruction",
+            "title": "",
+            "url": "",
+            "description": "",
+            "content": "Instruction 1",
+            "image": null,
+            "position": 2
+        },
+        {
+            "id": "l_693ea92403c28",
+            "wall_id": "w_693ea92403ad5",
+            "type": "link",
+            "title": "Link 1",
+            "url": "http:\/\/example.com",
+            "description": "",
+            "content": "",
+            "image": null,
+            "position": 1
+        },
+        {
+            "id": "l_693ea92403d23",
+            "wall_id": "w_693ea92403ad5",
+            "type": "instruction",
+            "title": "",
+            "url": "",
+            "description": "",
+            "content": "Instruction 1",
+            "image": null,
+            "position": 2
+        },
+        {
+            "id": "l_693ea94255516",
+            "wall_id": "w_693ea942553a9",
+            "type": "link",
+            "title": "Link 1",
+            "url": "http:\/\/example.com",
+            "description": "",
+            "content": "",
+            "image": null,
+            "position": 1
+        },
+        {
+            "id": "l_693ea9425564f",
+            "wall_id": "w_693ea942553a9",
+            "type": "instruction",
+            "title": "",
+            "url": "",
+            "description": "",
+            "content": "Instruction 1",
+            "image": null,
+            "position": 0
+        }
+    ],
+    "feedback": [
+        {
+            "id": "f_693ea9425591a",
+            "type": "list",
+            "reference_id": "w_693ea942553a9",
+            "content": "Great list!",
+            "timestamp": 1765714242
+        }
+    ]
 }

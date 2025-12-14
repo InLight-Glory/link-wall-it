@@ -18,10 +18,16 @@ if (!$side) {
     exit;
 }
 
+// Handle Feedback
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback']) && !empty($_POST['feedback_content'])) {
+    save_feedback('side', $side_id, $_POST['feedback_content']);
+    $feedback_success = "Thank you for your feedback!";
+}
+
 // Fetch parent building for breadcrumb
 $building = get_building($side['building_id']);
 
-// Fetch walls for this side
+// Fetch lists (walls) for this side
 $walls = get_walls_for_side($side_id);
 $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
 
@@ -45,6 +51,10 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
         .no-content { text-align: center; color: #7f8c8d; padding: 20px; background-color: #fff; border-radius: 8px; }
         .share-buttons { margin-top: 15px; display: flex; gap: 10px; justify-content: center; }
         .share-btn { display: inline-block; padding: 5px 10px; border-radius: 4px; background-color: #ecf0f1; color: #34495e; text-decoration: none; font-size: 0.9em; border: 1px solid #bdc3c7; cursor: pointer; }
+        .feedback-form { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #eee; margin-top: 40px; }
+        .feedback-form textarea { width: 100%; height: 100px; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .success-message { color: #2ecc71; margin-bottom: 15px; text-align: center; }
+        .feedback-form button { padding: 10px 15px; border: none; background-color: #3498db; color: white; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -66,20 +76,32 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
         </header>
 
         <main>
-            <h2>Walls</h2>
+            <h2>Lists</h2>
             <?php if (empty($walls)): ?>
                 <div class="no-content">
-                    <p>This side has no walls yet.</p>
+                    <p>This side has no lists yet.</p>
                 </div>
             <?php else: ?>
                 <div class="wall-list">
                     <?php foreach ($walls as $wall): ?>
-                        <a href="wall.php?id=<?= htmlspecialchars($wall['id']) ?>" class="wall-item">
+                        <a href="list.php?id=<?= htmlspecialchars($wall['id']) ?>" class="wall-item">
                             <h2><?= htmlspecialchars($wall['name']) ?></h2>
                         </a>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+
+            <div class="feedback-form">
+                <h3>Feedback</h3>
+                <?php if (isset($feedback_success)): ?>
+                    <p class="success-message"><?= htmlspecialchars($feedback_success) ?></p>
+                <?php else: ?>
+                    <form action="side.php?id=<?= htmlspecialchars($side_id) ?>" method="post">
+                        <textarea name="feedback_content" required placeholder="Send feedback..."></textarea>
+                        <button type="submit" name="submit_feedback">Send Feedback</button>
+                    </form>
+                <?php endif; ?>
+            </div>
         </main>
     </div>
     <script src="assets/js/sharing.js"></script>

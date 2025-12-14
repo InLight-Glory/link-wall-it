@@ -91,6 +91,7 @@ if(isset($_GET['delete']) && $_GET['delete'] == 'success') {
 <body>
     <div class="container">
         <h1>Manage Buildings</h1>
+        <p><a href="feedback.php" style="color: #3498db; text-decoration: none;">View User Feedback</a></p>
 
         <?php if ($success_message): ?>
             <div class="message success"><?= htmlspecialchars($success_message) ?></div>
