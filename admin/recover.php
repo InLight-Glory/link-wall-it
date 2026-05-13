@@ -52,46 +52,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account Recovery - Link-Wall-It</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f4f4; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .login-box { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { text-align: center; margin-top: 0; color: #2c3e50; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 12px; background: #e67e22; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background 0.3s; }
-        button:hover { background: #d35400; }
-        .error { color: #e74c3c; font-size: 0.9em; margin-bottom: 15px; text-align: center; background: #fce4ec; padding: 10px; border-radius: 4px; }
-        .success { color: #27ae60; font-size: 0.9em; margin-bottom: 15px; text-align: center; background: #e8f5e9; padding: 10px; border-radius: 4px; }
-    </style>
+    <title>Recover account &middot; Link-Wall-It</title>
+    <link rel="stylesheet" href="../assets/css/app.css">
 </head>
 <body>
-    <div class="login-box">
-        <h2>Recover Password</h2>
-        <?php if ($success): ?>
-            <div class="success">Password reset successfully!</div>
-            <p style="text-align: center;"><a href="login.php">Go to Login</a></p>
-        <?php else: ?>
-            <?php if ($error): ?><div class="error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
-            <form method="post">
-                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+    <div class="auth-shell">
+        <div class="auth-card">
+            <h1>Recover account</h1>
+            <p class="auth-card__sub">Use your 12-word recovery phrase to reset your password.</p>
 
-                <label for="username">Username</label>
-                <input type="text" name="username" id="username" required>
+            <?php if ($success): ?>
+                <div class="message message--success">Password reset successfully.</div>
+                <a href="login.php" class="btn btn--block">Go to sign in</a>
+            <?php else: ?>
+                <?php if ($error): ?>
+                    <div class="message message--error"><?= htmlspecialchars($error) ?></div>
+                <?php endif; ?>
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
 
-                <label for="recovery_phrase">Recovery Phrase</label>
-                <textarea name="recovery_phrase" id="recovery_phrase" rows="3" placeholder="enter your 12 word phrase here..." required></textarea>
+                    <div class="field">
+                        <label for="username">Username</label>
+                        <input type="text" name="username" id="username" required>
+                    </div>
 
-                <label for="new_password">New Password</label>
-                <input type="password" name="new_password" id="new_password" required>
+                    <div class="field">
+                        <label for="recovery_phrase">Recovery phrase</label>
+                        <textarea name="recovery_phrase" id="recovery_phrase" rows="3" placeholder="Enter your 12-word phrase" required></textarea>
+                    </div>
 
-                <label for="confirm_password">Confirm New Password</label>
-                <input type="password" name="confirm_password" id="confirm_password" required>
+                    <div class="field">
+                        <label for="new_password">New password</label>
+                        <input type="password" name="new_password" id="new_password" required>
+                    </div>
 
-                <button type="submit">Reset Password</button>
-            </form>
-            <p style="text-align: center; margin-top: 20px; font-size: 0.9em;"><a href="login.php" style="color: #7f8c8d; text-decoration: none;">Cancel</a></p>
-        <?php endif; ?>
+                    <div class="field">
+                        <label for="confirm_password">Confirm new password</label>
+                        <input type="password" name="confirm_password" id="confirm_password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn--block">Reset password</button>
+                </form>
+                <div class="auth-card__footer">
+                    <a href="login.php">Cancel</a>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 </body>
 </html>

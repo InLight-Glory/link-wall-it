@@ -6,37 +6,95 @@ session_start();
 
 require_once __DIR__ . '/app/core/functions.php';
 
-// Get wall ID from URL
 $wall_id = $_GET['id'] ?? null;
 if (!$wall_id) {
     header("Location: index.php");
     exit;
 }
 
-// Fetch wall data
 $wall = get_wall($wall_id);
 if (!$wall) {
     header("Location: index.php");
     exit;
 }
 
-// --- Check Access Control ---
+// --- Access Control ---
 $access_type = $wall['access_control']['type'];
 $auth_error = '';
 $is_unlocked = false;
 
-// A wall is considered unlocked if its ID is in the 'unlocked_walls' session array.
-// This is used for non-encrypted, code-based access.
 if (isset($_SESSION['unlocked_walls']) && in_array($wall_id, $_SESSION['unlocked_walls'])) {
     $is_unlocked = true;
 }
-// A wall is also unlocked if its password is in the 'wall_passwords' session array.
-// This is used for encrypted, password-based access.
 if (isset($_SESSION['wall_passwords'][$wall_id])) {
     $is_unlocked = true;
 }
 
-// Handle POST request for unlocking
+// Phase 3+4: long-term cookie auto-unlock.
+// Used by `email_allowlist` walls (Phase 3) AND `payment` walls (Phase 4 — buyer's email
+// is added to the allowlist when they complete payment, and the same cookie applies).
+// Restricted to these two access types so a stale cookie doesn't bypass password/codelist gates.
+if (!$is_unlocked && in_array($access_type, ['email_allowlist', 'payment'], true)) {
+    $cookie_name = email_access_cookie_name($wall_id);
+    if (!empty($_COOKIE[$cookie_name]) && verify_email_access_cookie($wall, $_COOKIE[$cookie_name])) {
+        $_SESSION['unlocked_walls'][] = $wall_id;
+        $is_unlocked = true;
+    }
+}
+
+// Phase 4: payment cancellation message.
+if (!$is_unlocked && !empty($_GET['payment_canceled'])) {
+    $auth_error = 'Payment was canceled.';
+}
+
+// Phase 4: payment return URLs. Stripe and PayPal redirect back here after the buyer pays.
+// We synchronously verify with the provider, and on success: complete the purchase record,
+// add the buyer to the allowlist, set the long-term cookie, unlock the session.
+if (!$is_unlocked && !empty($_GET['payment_success'])) {
+    $provider = $_GET['payment_success'];
+
+    if ($provider === 'stripe' && !empty($_GET['session_id'])) {
+        $verify = stripe_verify_session($_GET['session_id']);
+        if (!isset($verify['error']) && ($verify['wall_id'] ?? $wall_id) === $wall_id) {
+            if (complete_purchase('stripe', $verify['session_id'], $verify['email'])) {
+                grant_purchase_session_access($wall_id, $verify['email']);
+                header("Location: wall.php?id=" . $wall_id);
+                exit;
+            }
+            $auth_error = 'Payment succeeded but we could not finalize access. Please contact the wall owner.';
+        } else {
+            $auth_error = 'Stripe could not confirm the payment.' . (isset($verify['error']) ? ' ' . $verify['error'] : '');
+        }
+    } elseif ($provider === 'paypal' && !empty($_GET['token'])) {
+        $capture = paypal_capture_order($_GET['token']);
+        if (!isset($capture['error']) && ($capture['wall_id'] ?? $wall_id) === $wall_id) {
+            if (complete_purchase('paypal', $capture['order_id'], $capture['email'])) {
+                grant_purchase_session_access($wall_id, $capture['email']);
+                header("Location: wall.php?id=" . $wall_id);
+                exit;
+            }
+            $auth_error = 'Payment succeeded but we could not finalize access.';
+        } else {
+            $auth_error = 'PayPal could not capture the payment.' . (isset($capture['error']) ? ' ' . $capture['error'] : '');
+        }
+    }
+}
+
+// Phase 3: one-time invite link. ?invite=<token> grants session unlock and consumes the token.
+// Works regardless of access_type — invites are a parallel access channel.
+if (!$is_unlocked && !empty($_GET['invite'])) {
+    $consumed_for = consume_invite($_GET['invite'], $wall_id);
+    if ($consumed_for === $wall_id) {
+        $_SESSION['unlocked_walls'][] = $wall_id;
+        $is_unlocked = true;
+        // Strip the token from the URL so it's not bookmarked/shared.
+        header("Location: wall.php?id=" . $wall_id);
+        exit;
+    } else {
+        $auth_error = 'This invite link is invalid or has already been used.';
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($access_type === 'password' && isset($_POST['wall_password'])) {
         $submitted_password = $_POST['wall_password'];
@@ -56,12 +114,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $auth_error = 'Incorrect access code.';
         }
+    } elseif (in_array($access_type, ['email_allowlist', 'payment'], true) && isset($_POST['access_email'])) {
+        // Phase 3 (email_allowlist) AND Phase 4 (payment) — both gate on the same allowlist.
+        // Returning buyers in a new browser can re-verify by typing their email here.
+        $submitted_email = trim($_POST['access_email']);
+        if (filter_var($submitted_email, FILTER_VALIDATE_EMAIL) && wall_email_matches($wall, $submitted_email)) {
+            $_SESSION['unlocked_walls'][] = $wall_id;
+            $hash = email_match_hash($submitted_email, $wall_id);
+            setcookie(
+                email_access_cookie_name($wall_id),
+                build_email_access_cookie($wall_id, $hash),
+                [
+                    'expires'  => time() + 60 * 60 * 24 * ($access_type === 'payment' ? 365 : 30),
+                    'path'     => '/',
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                    'secure'   => !empty($_SERVER['HTTPS']),
+                ]
+            );
+            header("Location: wall.php?id=" . $wall_id);
+            exit;
+        } else {
+            $auth_error = ($access_type === 'payment')
+                ? "We can't find a purchase under that email address."
+                : "That email isn't on the access list for this wall.";
+        }
+    } elseif ($access_type === 'payment' && !empty($_POST['start_payment'])) {
+        // Phase 4: visitor clicked "Pay with Stripe" or "Pay with PayPal"
+        $chosen = $_POST['start_payment'];
+        $enabled = wall_enabled_providers($wall);
+        if (!in_array($chosen, $enabled, true)) {
+            $auth_error = 'That payment provider is not available for this wall.';
+        } elseif ($chosen === 'stripe') {
+            $session = stripe_create_checkout_session($wall);
+            if (isset($session['error'])) { $auth_error = $session['error']; }
+            else { header('Location: ' . $session['url']); exit; }
+        } elseif ($chosen === 'paypal') {
+            $order = paypal_create_order($wall);
+            if (isset($order['error'])) { $auth_error = $order['error']; }
+            else { header('Location: ' . $order['url']); exit; }
+        }
     }
 }
 
 $can_view_content = ($access_type === 'public') || $is_unlocked;
 
-// --- Data Retrieval for Display ---
+// --- Data ---
 $links = [];
 if ($can_view_content) {
     $raw_links = get_links_for_wall($wall_id);
@@ -77,7 +175,6 @@ if ($can_view_content) {
     }
 }
 
-// --- Parent data for breadcrumbs ---
 $side = get_side($wall['side_id']);
 $building = $side ? get_building($side['building_id']) : null;
 $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
@@ -88,95 +185,151 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($wall['name']) ?> - <?= htmlspecialchars($site_title) ?></title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa; margin: 0; }
-        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        header { text-align: center; margin-bottom: 50px; border-bottom: 1px solid #e9ecef; padding-bottom: 20px; }
-        h1 { font-size: 2.5em; color: #2c3e50; margin-bottom: 0.2em; }
-        .breadcrumb a { color: #3498db; text-decoration: none; }
-        .breadcrumb { margin-bottom: 20px; font-size: 1.1em; }
-        .link-list { list-style: none; padding: 0; }
-        .link-item { background: #fff; border-bottom: 1px solid #eee; padding: 15px 10px; display: block; text-decoration: none; color: inherit; transition: background 0.2s ease; }
-        .link-item:first-child { border-top: 1px solid #eee; }
-        .link-item:hover { background: #f9f9f9; }
-        .link-item h2 { margin: 0 0 4px 0; font-size: 1.1em; font-weight: 600; color: #2c3e50; }
-        .link-url { font-size: 0.85em; color: #7f8c8d; margin-bottom: 4px; display: block; }
-        .link-item p { margin-bottom: 0; color: #555; font-size: 0.95em; }
-        .link-content { display: flex; align-items: center; }
-        .link-image { flex-shrink: 0; width: 50px; height: 50px; margin-right: 15px; }
-        .link-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
-        .link-text { flex-grow: 1; }
-        .no-content, .access-form { text-align: center; color: #7f8c8d; padding: 40px 20px; background-color: #fff; border-radius: 8px; }
-        .access-form input { padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 4px; }
-        .access-form button { padding: 10px 15px; border: none; background-color: #3498db; color: white; border-radius: 4px; cursor: pointer; }
-        .error-message { color: #e74c3c; margin-bottom: 15px; }
-        .share-buttons { margin-top: 15px; display: flex; gap: 10px; justify-content: center; }
-        .share-btn { display: inline-block; padding: 5px 10px; border-radius: 4px; background-color: #ecf0f1; color: #34495e; text-decoration: none; font-size: 0.9em; border: 1px solid #bdc3c7; cursor: pointer; }
-        .link-item-footer { margin-top: 15px; text-align: right; }
-    </style>
+    <title><?= htmlspecialchars($wall['name']) ?> &middot; <?= htmlspecialchars($site_title) ?></title>
+    <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body>
     <div class="container">
-        <header>
-            <p class="breadcrumb">
-                <a href="index.php">Home</a> &raquo;
-                <?php if ($building): ?><a href="building.php?id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a> &raquo; <?php endif; ?>
-                <?php if ($side): ?><a href="side.php?id=<?= htmlspecialchars($side['id']) ?>"><?= htmlspecialchars($side['name']) ?></a> &raquo; <?php endif; ?>
-                <?= htmlspecialchars($wall['name']) ?>
-            </p>
-            <h1>🧱 <?= htmlspecialchars($wall['name']) ?></h1>
-            <div class="share-buttons">
-                <button class="share-btn" onclick="copyToClipboard(window.location.href, this)">Copy Wall Link</button>
-                <button class="share-btn" onclick="shareToTwitter(window.location.href, 'Check out this wall: <?= htmlspecialchars($wall['name']) ?>')">Share to Twitter</button>
-                <button class="share-btn" onclick="shareToFacebook(window.location.href)">Share to Facebook</button>
+        <nav class="breadcrumb">
+            <a href="index.php">Home</a>
+            <?php if ($building): ?>
+                <span class="breadcrumb__sep">/</span>
+                <a href="building.php?id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a>
+            <?php endif; ?>
+            <?php if ($side): ?>
+                <span class="breadcrumb__sep">/</span>
+                <a href="side.php?id=<?= htmlspecialchars($side['id']) ?>"><?= htmlspecialchars($side['name']) ?></a>
+            <?php endif; ?>
+            <span class="breadcrumb__sep">/</span>
+            <?= htmlspecialchars($wall['name']) ?>
+        </nav>
+
+        <header class="page-header row row--between">
+            <div>
+                <h1><?= htmlspecialchars($wall['name']) ?></h1>
+                <?php if ($can_view_content): ?>
+                    <p class="page-header__sub"><?= count($links) ?> <?= count($links) === 1 ? 'link' : 'links' ?></p>
+                <?php endif; ?>
+            </div>
+            <?php $share_url = wall_short_url($wall); ?>
+            <div class="row">
+                <button type="button" class="btn btn--secondary btn--sm" onclick="copyToClipboard('<?= htmlspecialchars($share_url, ENT_QUOTES) ?>', this)">Copy link</button>
+                <button type="button" class="btn btn--secondary btn--sm" onclick="shareToTwitter('<?= htmlspecialchars($share_url, ENT_QUOTES) ?>', '<?= htmlspecialchars($wall['name'], ENT_QUOTES) ?>')">Twitter</button>
+                <button type="button" class="btn btn--secondary btn--sm" onclick="shareToFacebook('<?= htmlspecialchars($share_url, ENT_QUOTES) ?>')">Facebook</button>
             </div>
         </header>
 
         <main>
             <?php if ($can_view_content): ?>
-                <div class="link-list">
-                    <?php if (empty($links)): ?>
-                        <div class="no-content"><p>This wall has no links yet.</p></div>
-                    <?php else: ?>
+                <?php if (empty($links)): ?>
+                    <div class="card">
+                        <p class="list__empty">This wall has no links yet.</p>
+                    </div>
+                <?php else: ?>
+                    <div>
                         <?php foreach ($links as $link): ?>
-                            <a href="<?= htmlspecialchars($link['url']) ?>" target="_blank" class="link-item">
-                                <div class="link-content">
-                                    <?php if (!empty($link['image'])): ?>
-                                        <div class="link-image"><img src="<?= htmlspecialchars($link['image']) ?>" alt="Link thumbnail"></div>
+                            <a class="link-row" href="<?= htmlspecialchars($link['url']) ?>" target="_blank" rel="noopener noreferrer">
+                                <?php if (!empty($link['image'])): ?>
+                                    <span class="link-row__thumb"><img src="<?= htmlspecialchars($link['image']) ?>" alt=""></span>
+                                <?php endif; ?>
+                                <span class="link-row__body">
+                                    <span class="link-row__title"><?= htmlspecialchars($link['title']) ?></span>
+                                    <span class="link-row__url"><?= htmlspecialchars($link['url']) ?></span>
+                                    <?php if (!empty($link['description'])): ?>
+                                        <span class="link-row__desc"><?= htmlspecialchars($link['description']) ?></span>
                                     <?php endif; ?>
-                                    <div class="link-text">
-                                        <h2><?= htmlspecialchars($link['title']) ?></h2>
-                                        <span class="link-url"><?= htmlspecialchars($link['url']) ?></span>
-                                        <?php if (!empty($link['description'])): ?><p><?= htmlspecialchars($link['description']) ?></p><?php endif; ?>
-                                    </div>
-                                </div>
-                                <div class="link-item-footer share-buttons">
-                                    <button class="share-btn" onclick="event.preventDefault(); copyToClipboard('<?= htmlspecialchars($link['url']) ?>', this)">Copy Link</button>
-                                    <button class="share-btn" onclick="event.preventDefault(); shareToTwitter('<?= htmlspecialchars($link['url']) ?>', 'Check out this link: <?= htmlspecialchars($link['title']) ?>')">Share to Twitter</button>
-                                    <button class="share-btn" onclick="event.preventDefault(); shareToFacebook('<?= htmlspecialchars($link['url']) ?>')">Share to Facebook</button>
-                                </div>
+                                </span>
+                                <span class="link-row__actions">
+                                    <button type="button" class="btn btn--secondary btn--sm" onclick="event.preventDefault(); copyToClipboard('<?= htmlspecialchars($link['url'], ENT_QUOTES) ?>', this)">Copy</button>
+                                </span>
                             </a>
                         <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
+                    </div>
+                <?php endif; ?>
             <?php else: ?>
-                <div class="access-form">
-                    <h2>This content is protected</h2>
+                <div class="card">
+                    <h2 style="margin-bottom: var(--space-2);">
+                        <?php if ($access_type === 'payment'):
+                            $price = (float)($wall['access_control']['payment']['price'] ?? 0);
+                        ?>
+                            <?= $price > 0 ? '$' . number_format($price, 2) . ' to view' : 'Locked' ?>
+                        <?php else: ?>
+                            Locked
+                        <?php endif; ?>
+                    </h2>
+                    <p style="color: var(--color-text-muted); font-size: var(--text-sm);">
+                        <?php if ($access_type === 'password'): ?>
+                            Enter the password to view this wall.
+                        <?php elseif ($access_type === 'codelist'): ?>
+                            Enter your access code to view this wall.
+                        <?php elseif ($access_type === 'email_allowlist'): ?>
+                            Enter your email to verify access.
+                        <?php elseif ($access_type === 'payment'): ?>
+                            Pay once for long-term access. Already purchased? Enter the email you used at checkout.
+                        <?php else: ?>
+                            This wall is not currently viewable.
+                        <?php endif; ?>
+                    </p>
+
+                    <?php if ($auth_error): ?>
+                        <div class="message message--error" style="margin-top: var(--space-3);"><?= htmlspecialchars($auth_error) ?></div>
+                    <?php endif; ?>
+
                     <?php if ($access_type === 'password'): ?>
-                        <p>Please enter the password to view this wall.</p>
-                        <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post">
-                            <?php if ($auth_error): ?><p class="error-message"><?= htmlspecialchars($auth_error) ?></p><?php endif; ?>
-                            <input type="password" name="wall_password" required>
-                            <button type="submit">Unlock</button>
+                        <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post" style="margin-top: var(--space-4);">
+                            <div class="field">
+                                <input type="password" name="wall_password" placeholder="Password" required autofocus>
+                            </div>
+                            <button type="submit" class="btn btn--block">Unlock</button>
                         </form>
                     <?php elseif ($access_type === 'codelist'): ?>
-                        <p>Please enter an access code to view this wall.</p>
-                        <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post">
-                            <?php if ($auth_error): ?><p class="error-message"><?= htmlspecialchars($auth_error) ?></p><?php endif; ?>
-                            <input type="text" name="access_code" required>
-                            <button type="submit">Unlock</button>
+                        <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post" style="margin-top: var(--space-4);">
+                            <div class="field">
+                                <input type="text" name="access_code" placeholder="Access code" required autofocus>
+                            </div>
+                            <button type="submit" class="btn btn--block">Unlock</button>
                         </form>
+                    <?php elseif ($access_type === 'email_allowlist'): ?>
+                        <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post" style="margin-top: var(--space-4);">
+                            <div class="field">
+                                <input type="email" name="access_email" placeholder="you@example.com" required autofocus>
+                            </div>
+                            <button type="submit" class="btn btn--block">Verify</button>
+                        </form>
+                    <?php elseif ($access_type === 'payment'):
+                        $price = (float)($wall['access_control']['payment']['price'] ?? 0);
+                        $providers = wall_enabled_providers($wall);
+                    ?>
+                        <?php if ($price <= 0 || empty($providers)): ?>
+                            <div class="message message--warn" style="margin-top: var(--space-3);">
+                                Payment for this wall is not configured. Please contact the wall owner.
+                            </div>
+                        <?php else: ?>
+                            <div style="display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4);">
+                                <?php if (in_array('stripe', $providers, true)): ?>
+                                    <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post">
+                                        <input type="hidden" name="start_payment" value="stripe">
+                                        <button type="submit" class="btn btn--block">Pay $<?= number_format($price, 2) ?> with card (Stripe)</button>
+                                    </form>
+                                <?php endif; ?>
+                                <?php if (in_array('paypal', $providers, true)): ?>
+                                    <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post">
+                                        <input type="hidden" name="start_payment" value="paypal">
+                                        <button type="submit" class="btn btn--secondary btn--block">Pay $<?= number_format($price, 2) ?> with PayPal</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+
+                            <div style="margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--color-border);">
+                                <p style="font-size: var(--text-xs); color: var(--color-text-muted); margin-bottom: var(--space-2);">Already purchased? Enter the email you used:</p>
+                                <form action="wall.php?id=<?= htmlspecialchars($wall_id) ?>" method="post">
+                                    <div class="field--inline">
+                                        <input type="email" name="access_email" placeholder="you@example.com" required>
+                                        <button type="submit" class="btn btn--secondary">Verify</button>
+                                    </div>
+                                </form>
+                            </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>

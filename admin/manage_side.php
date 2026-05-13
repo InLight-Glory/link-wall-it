@@ -74,99 +74,84 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Walls for <?= htmlspecialchars($side['name']) ?></title>
-    <!-- Re-using the same stylesheet as it's generic enough -->
-    <link rel="stylesheet" href="manage_building.css">
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
-        .container { max-width: 800px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1, h2 { color: #2c3e50; }
-        .breadcrumb { margin-bottom: 20px; }
-        .breadcrumb a { color: #3498db; text-decoration: none; }
-        hr { border: 0; height: 1px; background: #ddd; margin: 20px 0; }
-        form { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        input[type="text"] { width: calc(100% - 110px); padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 15px; border: none; background-color: #3498db; color: white; border-radius: 4px; cursor: pointer; }
-        button[type="submit"] { background-color: #2ecc71; }
-        .item-list { list-style: none; padding: 0; }
-        .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-        .item:last-child { border-bottom: none; }
-        .item-actions a { text-decoration: none; color: #3498db; margin-left: 15px; }
-        .item-actions a.delete { color: #e74c3c; }
-        .message { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-        .success { background-color: #e8f5e9; color: #2e7d32; }
-        .error { background-color: #ffebee; color: #c62828; }
-    </style>
+    <title><?= htmlspecialchars($side['name']) ?> &middot; Walls</title>
+    <link rel="stylesheet" href="../assets/css/app.css">
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <p class="breadcrumb">
-                <a href="index.php">Admin Home</a> &raquo;
-                <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a> &raquo;
-                Manage Side
-            </p>
-            <a href="logout.php" style="color: #e74c3c; text-decoration: none; font-weight: bold;">Logout</a>
-        </div>
-        <h1>Manage Walls for "<?= htmlspecialchars($side['name']) ?>"</h1>
+        <header class="app-header">
+            <h1><?= htmlspecialchars($side['name']) ?></h1>
+            <nav class="app-header__nav">
+                <a href="editor.php">Editor</a>
+                <a href="index.php">Buildings</a>
+                <a href="settings.php">Settings</a>
+                <a href="logout.php" class="danger">Sign out</a>
+            </nav>
+        </header>
+
+        <nav class="breadcrumb">
+            <a href="index.php">Buildings</a>
+            <span class="breadcrumb__sep">/</span>
+            <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a>
+            <span class="breadcrumb__sep">/</span>
+            <?= htmlspecialchars($side['name']) ?>
+        </nav>
 
         <?php if ($success_message): ?>
-            <div class="message success"><?= htmlspecialchars($success_message) ?></div>
+            <div class="message message--success"><?= htmlspecialchars($success_message) ?></div>
         <?php endif; ?>
         <?php if ($error_message): ?>
-            <div class="message error"><?= htmlspecialchars($error_message) ?></div>
+            <div class="message message--error"><?= htmlspecialchars($error_message) ?></div>
         <?php endif; ?>
 
-        <!-- Form to create a new wall -->
-        <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post">
-            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            <h2>Create New Wall</h2>
-            <input type="text" name="wall_name" placeholder="Enter wall name" required>
-            <button type="submit" name="create_wall">Create Wall</button>
-        </form>
+        <section class="section">
+            <div class="section__heading"><h2>Create wall</h2></div>
+            <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post" class="field--inline">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                <input type="text" name="wall_name" placeholder="Wall name" required>
+                <button type="submit" name="create_wall" class="btn">Create</button>
+            </form>
+        </section>
 
-        <hr>
+        <section class="section">
+            <div class="section__heading"><h2>Walls</h2></div>
 
-        <!-- List of existing walls -->
-        <h2>Existing Walls</h2>
-        <div class="item-list">
             <?php if (empty($walls)): ?>
-                <p>No walls found. Create one above!</p>
+                <div class="list__empty">No walls yet. Create one above.</div>
             <?php else: ?>
-                <?php foreach ($walls as $wall): ?>
-                    <div class="item">
-                        <?php
-                        $is_editing = (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id']) && $_GET['id'] === $wall['id']);
-                        ?>
-
-                        <?php if ($is_editing): ?>
-                            <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post" style="width: 100%;">
-                                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                                <input type="hidden" name="wall_id" value="<?= htmlspecialchars($wall['id']) ?>">
-                                <input type="text" name="wall_name" value="<?= htmlspecialchars($wall['name']) ?>" required>
-                                <button type="submit" name="update_wall">Update</button>
-                                <a href="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>">Cancel</a>
-                            </form>
-                        <?php else: ?>
-                            <span>
-                                <strong><?= htmlspecialchars($wall['name']) ?></strong>
-                                <small>(ID: <?= htmlspecialchars($wall['id']) ?>)</small>
-                            </span>
-                            <span class="item-actions">
-                                <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall['id']) ?>">Manage Links</a>
-                                <a href="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>&action=edit&id=<?= htmlspecialchars($wall['id']) ?>">Edit Name</a>
-                                <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this wall and all its contents?');">
+                <div>
+                    <?php foreach ($walls as $wall): ?>
+                        <?php $is_editing = (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id']) && $_GET['id'] === $wall['id']); ?>
+                        <div class="node">
+                            <?php if ($is_editing): ?>
+                                <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post" class="field--inline" style="flex: 1;">
                                     <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-                                    <input type="hidden" name="action" value="delete">
-                                    <input type="hidden" name="id" value="<?= htmlspecialchars($wall['id']) ?>">
-                                    <button type="submit" class="delete" style="background:none; border:none; color:#e74c3c; cursor:pointer; padding:0; font:inherit; text-decoration:underline; margin-left: 15px;">Delete</button>
+                                    <input type="hidden" name="wall_id" value="<?= htmlspecialchars($wall['id']) ?>">
+                                    <input type="text" name="wall_name" value="<?= htmlspecialchars($wall['name']) ?>" required autofocus>
+                                    <button type="submit" name="update_wall" class="btn btn--sm">Save</button>
+                                    <a href="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" class="btn btn--ghost btn--sm">Cancel</a>
                                 </form>
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                <?php endforeach; ?>
+                            <?php else: ?>
+                                <span>
+                                    <span class="node__name"><?= htmlspecialchars($wall['name']) ?></span>
+                                    <span class="node__id"><?= htmlspecialchars($wall['id']) ?></span>
+                                </span>
+                                <span class="node__actions">
+                                    <a class="btn btn--secondary btn--sm" href="manage_wall.php?wall_id=<?= htmlspecialchars($wall['id']) ?>">Links</a>
+                                    <a class="btn btn--ghost btn--sm" href="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>&action=edit&id=<?= htmlspecialchars($wall['id']) ?>">Rename</a>
+                                    <form action="manage_side.php?side_id=<?= htmlspecialchars($side_id) ?>" method="post" style="display:inline;" onsubmit="return confirm('Delete this wall and all its contents?');">
+                                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="<?= htmlspecialchars($wall['id']) ?>">
+                                        <button type="submit" class="btn btn--ghost btn--sm" style="color: var(--color-danger);">Delete</button>
+                                    </form>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
-        </div>
+        </section>
     </div>
 </body>
 </html>

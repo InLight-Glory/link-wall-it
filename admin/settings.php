@@ -13,15 +13,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
 
     if (isset($_POST['update_settings'])) {
-        $new_settings = [
-            'site_title' => $_POST['site_title'] ?? 'Link-Wall-It',
-            'site_description' => $_POST['site_description'] ?? '',
-            'stripe_publishable_key' => $_POST['stripe_publishable_key'] ?? '',
-            'stripe_secret_key' => $_POST['stripe_secret_key'] ?? '',
+        // Allow updating ANY of the known settings keys via POST. Missing keys retain old value.
+        $known_keys = [
+            'site_title', 'site_description',
+            'stripe_publishable_key', 'stripe_secret_key', 'stripe_webhook_secret',
+            'paypal_client_id', 'paypal_client_secret', 'paypal_webhook_id',
+            'payment_mode',
         ];
+        $new_settings = [];
+        foreach ($known_keys as $k) {
+            if (array_key_exists($k, $_POST)) {
+                $new_settings[$k] = trim((string)$_POST[$k]);
+            }
+        }
+        if (isset($new_settings['payment_mode']) && !in_array($new_settings['payment_mode'], ['test', 'live'], true)) {
+            $new_settings['payment_mode'] = 'test';
+        }
 
-        // Preserve other settings if any (merge)
-        // We merge new over old to update
+        // Boolean toggles (form sends '1' if checked, missing if unchecked)
+        $new_settings['short_url_rewrite'] = !empty($_POST['short_url_rewrite']);
+
         $db['settings'] = array_merge($settings, $new_settings);
 
         if (save_db($db)) {
@@ -62,74 +73,137 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Settings - Link-Wall-It</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
-        .container { max-width: 800px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1, h2 { color: #2c3e50; }
-        .breadcrumb { margin-bottom: 20px; }
-        .breadcrumb a { color: #3498db; text-decoration: none; }
-        form { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; }
-        button { padding: 10px 15px; border: none; background-color: #2ecc71; color: white; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background 0.3s; }
-        button:hover { background-color: #27ae60; }
-        .message { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-        .success { background-color: #e8f5e9; color: #2e7d32; }
-        .error { background-color: #ffebee; color: #c62828; }
-    </style>
+    <title>Settings &middot; Admin</title>
+    <link rel="stylesheet" href="../assets/css/app.css">
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <p class="breadcrumb"><a href="index.php">Admin Home</a> &raquo; Settings</p>
-            <a href="logout.php" style="color: #e74c3c; text-decoration: none; font-weight: bold;">Logout</a>
-        </div>
-        <h1>Global Settings</h1>
+        <header class="app-header">
+            <h1>Settings</h1>
+            <nav class="app-header__nav">
+                <a href="editor.php">Editor</a>
+                <a href="index.php">Buildings</a>
+                <a href="logout.php" class="danger">Sign out</a>
+            </nav>
+        </header>
 
-        <?php if ($success_message): ?><div class="message success"><?= htmlspecialchars($success_message) ?></div><?php endif; ?>
-        <?php if ($error_message): ?><div class="message error"><?= htmlspecialchars($error_message) ?></div><?php endif; ?>
+        <?php if ($success_message): ?><div class="message message--success"><?= htmlspecialchars($success_message) ?></div><?php endif; ?>
+        <?php if ($error_message): ?><div class="message message--error"><?= htmlspecialchars($error_message) ?></div><?php endif; ?>
 
-        <form method="post">
-            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            <h2>General Information</h2>
+        <section class="section">
+            <div class="section__heading"><h2>Site</h2></div>
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
 
-            <label for="site_title">Site Title</label>
-            <input type="text" name="site_title" id="site_title" value="<?= htmlspecialchars($settings['site_title'] ?? '') ?>" required>
+                <div class="field">
+                    <label for="site_title">Site title</label>
+                    <input type="text" name="site_title" id="site_title" value="<?= htmlspecialchars($settings['site_title'] ?? '') ?>" required>
+                </div>
 
-            <label for="site_description">Site Description</label>
-            <textarea name="site_description" id="site_description" rows="3"><?= htmlspecialchars($settings['site_description'] ?? '') ?></textarea>
+                <div class="field">
+                    <label for="site_description">Site description</label>
+                    <textarea name="site_description" id="site_description" rows="2"><?= htmlspecialchars($settings['site_description'] ?? '') ?></textarea>
+                </div>
 
-            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                <div class="field">
+                    <label style="font-weight: 400;">
+                        <input type="checkbox" name="short_url_rewrite" value="1" style="width: auto; margin-right: var(--space-1);"
+                               <?= !empty($settings['short_url_rewrite']) ? 'checked' : '' ?>>
+                        Use pretty short URLs (<code>/s/abc</code> instead of <code>/s.php?s=abc</code>)
+                    </label>
+                    <small>Requires <code>mod_rewrite</code> + the bundled root <code>.htaccess</code>. Test on your host first &mdash; if <code>/s/abc</code> 404s, leave this off.</small>
+                </div>
 
-            <h2>Stripe Integration</h2>
-            <p style="color: #7f8c8d; font-size: 0.9em;">Enter your Stripe API keys to enable monetization features. You can find these in your <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color: #3498db;">Stripe Dashboard</a>.</p>
+                <button type="submit" name="update_settings" class="btn">Save site settings</button>
+            </form>
+        </section>
 
-            <label for="stripe_publishable_key">Publishable Key</label>
-            <input type="text" name="stripe_publishable_key" id="stripe_publishable_key" value="<?= htmlspecialchars($settings['stripe_publishable_key'] ?? '') ?>" placeholder="pk_test_...">
+        <section class="section">
+            <div class="section__heading">
+                <h2>Payments</h2>
+                <small>Mode: <strong><?= htmlspecialchars($settings['payment_mode'] ?? 'test') ?></strong></small>
+            </div>
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
 
-            <label for="stripe_secret_key">Secret Key</label>
-            <input type="text" name="stripe_secret_key" id="stripe_secret_key" value="<?= htmlspecialchars($settings['stripe_secret_key'] ?? '') ?>" placeholder="sk_test_...">
+                <div class="field">
+                    <label for="payment_mode">Mode</label>
+                    <select name="payment_mode" id="payment_mode">
+                        <option value="test" <?= ($settings['payment_mode'] ?? 'test') === 'test' ? 'selected' : '' ?>>Test / sandbox</option>
+                        <option value="live" <?= ($settings['payment_mode'] ?? 'test') === 'live' ? 'selected' : '' ?>>Live</option>
+                    </select>
+                    <small>Affects PayPal endpoint (sandbox vs. production). Stripe uses whichever key you paste below — the prefix indicates test vs. live.</small>
+                </div>
 
-            <button type="submit" name="update_settings">Save Settings</button>
-        </form>
+                <h3 style="margin-top: var(--space-5); margin-bottom: var(--space-3);">Stripe</h3>
+                <p style="color: var(--color-text-muted); font-size: var(--text-sm); margin-top: 0;">
+                    Get your keys from the <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer">Stripe API keys page</a>.
+                    For webhook events, point Stripe at <code>/stripe_webhook.php</code> and paste the signing secret here.
+                </p>
 
-        <hr style="margin: 40px 0; border: 0; border-top: 1px solid #eee;">
+                <div class="field">
+                    <label for="stripe_publishable_key">Publishable key</label>
+                    <input type="text" name="stripe_publishable_key" id="stripe_publishable_key" value="<?= htmlspecialchars($settings['stripe_publishable_key'] ?? '') ?>" placeholder="pk_test_...">
+                </div>
 
-        <form method="post">
-            <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
-            <h2>Change Password</h2>
-            <label for="current_password">Current Password</label>
-            <input type="password" name="current_password" id="current_password" required>
+                <div class="field">
+                    <label for="stripe_secret_key">Secret key</label>
+                    <input type="text" name="stripe_secret_key" id="stripe_secret_key" value="<?= htmlspecialchars($settings['stripe_secret_key'] ?? '') ?>" placeholder="sk_test_...">
+                </div>
 
-            <label for="new_password">New Password</label>
-            <input type="password" name="new_password" id="new_password" required>
+                <div class="field">
+                    <label for="stripe_webhook_secret">Webhook signing secret</label>
+                    <input type="text" name="stripe_webhook_secret" id="stripe_webhook_secret" value="<?= htmlspecialchars($settings['stripe_webhook_secret'] ?? '') ?>" placeholder="whsec_...">
+                    <small>Without this, the webhook endpoint refuses every request.</small>
+                </div>
 
-            <label for="confirm_password">Confirm New Password</label>
-            <input type="password" name="confirm_password" id="confirm_password" required>
+                <h3 style="margin-top: var(--space-5); margin-bottom: var(--space-3);">PayPal</h3>
+                <p style="color: var(--color-text-muted); font-size: var(--text-sm); margin-top: 0;">
+                    Create an app in the <a href="https://developer.paypal.com/dashboard/applications/sandbox" target="_blank" rel="noopener noreferrer">PayPal Developer Dashboard</a>. For webhooks, point PayPal at <code>/paypal_webhook.php</code> and paste the webhook ID here.
+                </p>
 
-            <button type="submit" name="change_password" style="background-color: #e67e22;">Change Password</button>
-        </form>
+                <div class="field">
+                    <label for="paypal_client_id">Client ID</label>
+                    <input type="text" name="paypal_client_id" id="paypal_client_id" value="<?= htmlspecialchars($settings['paypal_client_id'] ?? '') ?>" placeholder="A1B2...">
+                </div>
+
+                <div class="field">
+                    <label for="paypal_client_secret">Client secret</label>
+                    <input type="text" name="paypal_client_secret" id="paypal_client_secret" value="<?= htmlspecialchars($settings['paypal_client_secret'] ?? '') ?>" placeholder="EX2...">
+                </div>
+
+                <div class="field">
+                    <label for="paypal_webhook_id">Webhook ID</label>
+                    <input type="text" name="paypal_webhook_id" id="paypal_webhook_id" value="<?= htmlspecialchars($settings['paypal_webhook_id'] ?? '') ?>" placeholder="WH-...">
+                </div>
+
+                <button type="submit" name="update_settings" class="btn">Save payment settings</button>
+            </form>
+        </section>
+
+        <section class="section">
+            <div class="section__heading"><h2>Change password</h2></div>
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+
+                <div class="field">
+                    <label for="current_password">Current password</label>
+                    <input type="password" name="current_password" id="current_password" required>
+                </div>
+
+                <div class="field">
+                    <label for="new_password">New password</label>
+                    <input type="password" name="new_password" id="new_password" required>
+                </div>
+
+                <div class="field">
+                    <label for="confirm_password">Confirm new password</label>
+                    <input type="password" name="confirm_password" id="confirm_password" required>
+                </div>
+
+                <button type="submit" name="change_password" class="btn btn--secondary">Update password</button>
+            </form>
+        </section>
     </div>
 </body>
 </html>

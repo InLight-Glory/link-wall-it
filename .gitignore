@@ -12,3 +12,11 @@ data/installed.lock
 # Logs and Testing
 php_server.log
 verification/
+
+# Security: Exclude sensitive and AI prompt files
+.BuildDocs/
+scripts/reset_admin_password.php
+*.md
+*.agent.md
+*.prompt.md
+*.instructions.md

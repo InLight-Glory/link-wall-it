@@ -85,63 +85,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Install Link-Wall-It</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { width: 100%; max-width: 500px; padding: 40px; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #2c3e50; margin-top: 0; }
-        p.intro { text-align: center; color: #7f8c8d; margin-bottom: 30px; }
-        form { display: flex; flex-direction: column; }
-        label { margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="password"] { padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
-        button { padding: 12px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background 0.3s; }
-        button:hover { background-color: #2980b9; }
-        .error { background-color: #ffebee; color: #c62828; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
-        .success { text-align: center; }
-        .success h2 { color: #27ae60; }
-        .btn-admin { display: inline-block; margin-top: 20px; padding: 12px 25px; background-color: #2ecc71; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; }
-    </style>
+    <title>Install &middot; Link-Wall-It</title>
+    <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body>
-    <div class="container">
-        <?php if ($success): ?>
-            <div class="success">
-                <h2>Installation Successful!</h2>
-                <p>Link-Wall-It has been installed and configured.</p>
+    <div class="auth-shell">
+        <div class="auth-card" style="max-width: 460px;">
+            <?php if ($success): ?>
+                <h1>Installation complete</h1>
+                <p class="auth-card__sub">Link-Wall-It has been configured.</p>
 
-                <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 4px; border: 1px solid #ffeeba; margin: 20px 0; text-align: left;">
-                    <strong>⚠️ IMPORTANT: SAVE THIS RECOVERY PHRASE</strong>
-                    <p>This is the ONLY way to recover your account if you lose your password. Copy it and store it in a safe place.</p>
-                    <textarea readonly style="width: 100%; height: 60px; margin-top: 10px; font-family: monospace; padding: 10px;"><?= htmlspecialchars($recovery_phrase) ?></textarea>
+                <div class="callout">
+                    <strong>Save this recovery phrase.</strong>
+                    <p style="margin-top: var(--space-1); margin-bottom: 0;">This is the only way to recover your account if you lose your password.</p>
+                    <textarea readonly rows="3"><?= htmlspecialchars($recovery_phrase) ?></textarea>
                 </div>
 
-                <p>You can now log in to the administration panel.</p>
-                <a href="admin/login.php" class="btn-admin">Go to Admin Panel</a>
-            </div>
-        <?php else: ?>
-            <h1>Link-Wall-It Installation</h1>
-            <p class="intro">Welcome! Please configure your site settings to get started.</p>
+                <a href="admin/login.php" class="btn btn--block" style="margin-top: var(--space-5);">Go to admin panel</a>
+            <?php else: ?>
+                <h1>Install Link-Wall-It</h1>
+                <p class="auth-card__sub">Configure your site to get started.</p>
 
-            <?php if ($error): ?>
-                <div class="error"><?= htmlspecialchars($error) ?></div>
+                <?php if ($error): ?>
+                    <div class="message message--error"><?= htmlspecialchars($error) ?></div>
+                <?php endif; ?>
+
+                <form method="post">
+                    <div class="field">
+                        <label for="site_title">Site title</label>
+                        <input type="text" name="site_title" id="site_title" placeholder="My Link Wall" value="<?= isset($_POST['site_title']) ? htmlspecialchars($_POST['site_title']) : '' ?>" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="username">Admin username</label>
+                        <input type="text" name="username" id="username" placeholder="admin" value="<?= isset($_POST['username']) ? htmlspecialchars($_POST['username']) : '' ?>" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="password">Admin password</label>
+                        <input type="password" name="password" id="password" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="confirm_password">Confirm password</label>
+                        <input type="password" name="confirm_password" id="confirm_password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn--block">Install</button>
+                </form>
             <?php endif; ?>
-
-            <form method="post">
-                <label for="site_title">Site Title</label>
-                <input type="text" name="site_title" id="site_title" placeholder="My Link Wall" value="<?= isset($_POST['site_title']) ? htmlspecialchars($_POST['site_title']) : '' ?>" required>
-
-                <label for="username">Admin Username</label>
-                <input type="text" name="username" id="username" placeholder="admin" value="<?= isset($_POST['username']) ? htmlspecialchars($_POST['username']) : '' ?>" required>
-
-                <label for="password">Admin Password</label>
-                <input type="password" name="password" id="password" required>
-
-                <label for="confirm_password">Confirm Password</label>
-                <input type="password" name="confirm_password" id="confirm_password" required>
-
-                <button type="submit">Install</button>
-            </form>
-        <?php endif; ?>
+        </div>
     </div>
 </body>
 </html>

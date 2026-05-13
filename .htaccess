@@ -1,0 +1,17 @@
+# Link-Wall-It root .htaccess
+#
+# Optional pretty-URL rewrite for the link shortener. /s/<slug> -> s.php?s=<slug>.
+#
+# To enable, also flip the `short_url_rewrite` setting on in the admin Settings page
+# (or set it directly in data/database.json under settings.short_url_rewrite). Without
+# the setting, share buttons fall back to the s.php?s=<slug> form.
+#
+# Some shared hosts disable mod_rewrite or AllowOverride — if /s/abc returns 404 on your
+# host, leave the setting OFF and continue using s.php?s=abc.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # /s/<slug> -> s.php?s=<slug>
+    RewriteRule ^s/([A-Za-z0-9_-]{2,32})/?$ s.php?s=$1 [L,QSA]
+</IfModule>

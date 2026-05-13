@@ -1,17 +1,147 @@
 {
     "settings": {
-        "site_title": "Link-Wall-It",
-        "site_description": "Your personal link wall."
+        "site_title": "Amazing iLG Links",
+        "site_description": "Your personal link wall.",
+        "stripe_publishable_key": "",
+        "stripe_secret_key": ""
     },
     "users": [
         {
             "username": "admin",
-            "password_hash": "$argon2id$v=19$m=65536,t=4,p=1$ZW9jUFRKNzZSV1M0L0Z3eQ$YFKyt8gfoiNA2Emriu4x2reg57hbVmqNEsq+9aC/dEc",
-            "salt": "d07db8389a12fe48076aae4cc82cebd8"
+            "password_hash": "$argon2id$v=19$m=65536,t=4,p=1$Ty5PdW51LmExbVQ5Z1haag$gtT3Pb+Lm9XFKE+GYPQNYfMlgxhFlaSLI2P2Fn4\/MVQ",
+            "salt": "7c79bd41099e3fb68c5df65ff0ba3a5d"
         }
     ],
-    "buildings": [],
-    "sides": [],
-    "walls": [],
-    "links": []
+    "buildings": [
+        {
+            "id": "b_692209a4bcd83",
+            "name": "Arts"
+        },
+        {
+            "id": "b_692209c4397ee",
+            "name": "Crafts"
+        },
+        {
+            "id": "b_69745e3433261",
+            "name": "Public"
+        }
+    ],
+    "sides": [
+        {
+            "id": "s_692209cf8a8a1",
+            "building_id": "b_692209c4397ee",
+            "name": "Handmaid Wall"
+        },
+        {
+            "id": "s_69745e3d13b12",
+            "building_id": "b_69745e3433261",
+            "name": "Writings"
+        },
+        {
+            "id": "s_69745e4b26a98",
+            "building_id": "b_69745e3433261",
+            "name": "Generated"
+        },
+        {
+            "id": "s_69fda74a3ce02",
+            "building_id": "b_69745e3433261",
+            "name": "Day-Trading"
+        }
+    ],
+    "walls": [
+        {
+            "id": "w_692209e0395a5",
+            "side_id": "s_692209cf8a8a1",
+            "name": "Made in Miami",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": [],
+                "payment": {
+                    "price": 0,
+                    "currency": "USD"
+                }
+            }
+        },
+        {
+            "id": "w_69745e57b2ecd",
+            "side_id": "s_69745e3d13b12",
+            "name": "Temp",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": [],
+                "payment": {
+                    "price": 0,
+                    "currency": "USD"
+                }
+            }
+        },
+        {
+            "id": "w_69fda76492f10",
+            "side_id": "s_69fda74a3ce02",
+            "name": "Resources",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": [],
+                "payment": {
+                    "price": 0,
+                    "currency": "USD"
+                },
+                "email_allowlist": []
+            }
+        }
+    ],
+    "links": [
+        {
+            "id": "l_69250ac229343",
+            "wall_id": "w_692209e0395a5",
+            "title": "The Google Search",
+            "url": "https:\/\/google.com",
+            "description": "",
+            "image": null
+        },
+        {
+            "id": "l_69250ad923a89",
+            "wall_id": "w_692209e0395a5",
+            "title": "The Duck Search",
+            "url": "https:\/\/duckduckgo.com",
+            "description": "",
+            "image": null
+        },
+        {
+            "id": "l_69745e72c43d3",
+            "wall_id": "w_69745e57b2ecd",
+            "title": "Zoorastic Episode 1",
+            "url": "https:\/\/docs.google.com\/document\/d\/1fFJlx4tlN1tsbuiBTIAg7ioAnXvus8Myw5Bo-icITjg\/edit?usp=sharing",
+            "description": "",
+            "image": null
+        },
+        {
+            "id": "l_69745e8e83519",
+            "wall_id": "w_69745e57b2ecd",
+            "title": "Zoorastic Episode 2",
+            "url": "https:\/\/docs.google.com\/document\/d\/1eX5h83OTe6de694FrYi7KCz9p1CqY41iZYZnWbeWz1I\/edit?usp=sharing",
+            "description": "",
+            "image": null
+        },
+        {
+            "id": "l_69fda80e1024c",
+            "wall_id": "w_69fda76492f10",
+            "title": "Beginners Day Trading PDF",
+            "url": "http:\/\/inlightglory.com\/stockfinder\/trading-starter.pdf",
+            "description": "Great resource for absolute beginner.",
+            "image": null
+        }
+    ]
 }

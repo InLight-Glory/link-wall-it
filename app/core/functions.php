@@ -4,6 +4,13 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/encryption.php';
 require_once __DIR__ . '/csrf.php';
+require_once __DIR__ . '/install_secret.php';
+require_once __DIR__ . '/email_access.php';
+require_once __DIR__ . '/invites.php';
+require_once __DIR__ . '/payments.php';
+require_once __DIR__ . '/payment_stripe.php';
+require_once __DIR__ . '/payment_paypal.php';
+require_once __DIR__ . '/slugs.php';
 
 // Check installation status
 $lock_file = __DIR__ . '/../../data/installed.lock';
@@ -41,7 +48,17 @@ function login_user($username, $password) {
 
     foreach ($users as $user) {
         if ($user['username'] === $username) {
-            // Verify password
+            // Support a temporary plaintext marker for manual resets: 'PLAINTEXT:<password>'
+            if (isset($user['password_hash']) && strpos($user['password_hash'], 'PLAINTEXT:') === 0) {
+                $plain = substr($user['password_hash'], strlen('PLAINTEXT:'));
+                if ($password === $plain) {
+                    $_SESSION['user_id'] = $user['username']; // Simple session user ID
+                    return true;
+                }
+                return false;
+            }
+
+            // Verify password using stored hash and salt
             $salt = $user['salt'] ?? '';
             if (verify_password($password, $user['password_hash'], $salt)) {
                 $_SESSION['user_id'] = $user['username']; // Simple session user ID
@@ -137,6 +154,54 @@ function create_building($name) {
 function get_all_buildings() {
     $db = get_db();
     return $db['buildings'] ?? [];
+}
+
+/* ------------------------------------------------------------------ */
+/* Public visibility filters (Phase 4.1 — "don't advertise private content")
+ *
+ * A Wall is publicly listable iff its access_control.type is 'public'.
+ * A Side / Building is publicly listable iff it contains at least one publicly-
+ * listable descendant. Direct URLs to private walls still work — the locked
+ * gate on wall.php still handles them. These filters are only for *listings*.
+ * ------------------------------------------------------------------ */
+
+function wall_is_publicly_listable(array $wall): bool {
+    return ($wall['access_control']['type'] ?? 'public') === 'public';
+}
+
+function side_is_publicly_listable(string $side_id): bool {
+    foreach (get_walls_for_side($side_id) as $w) {
+        if (wall_is_publicly_listable($w)) { return true; }
+    }
+    return false;
+}
+
+function building_is_publicly_listable(string $building_id): bool {
+    foreach (get_sides_for_building($building_id) as $s) {
+        if (side_is_publicly_listable($s['id'])) { return true; }
+    }
+    return false;
+}
+
+function get_publicly_listable_buildings(): array {
+    return array_values(array_filter(
+        get_all_buildings(),
+        fn($b) => building_is_publicly_listable($b['id'])
+    ));
+}
+
+function get_publicly_listable_sides_for_building(string $building_id): array {
+    return array_values(array_filter(
+        get_sides_for_building($building_id),
+        fn($s) => side_is_publicly_listable($s['id'])
+    ));
+}
+
+function get_publicly_listable_walls_for_side(string $side_id): array {
+    return array_values(array_filter(
+        get_walls_for_side($side_id),
+        'wall_is_publicly_listable'
+    ));
 }
 
 /**
@@ -399,11 +464,13 @@ function create_wall($side_id, $name) {
         'id' => 'w_' . uniqid(),
         'side_id' => $side_id,
         'name' => htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
+        'slug' => generate_unique_slug() ?? '',
         'access_control' => [
-            'type' => 'public', // 'public', 'password', 'codelist', 'payment'
+            'type' => 'public', // 'public' | 'password' | 'codelist' | 'payment' | 'email_allowlist'
             'password' => ['hash' => null, 'salt' => null],
             'codelist' => [],
-            'payment' => ['price' => 0, 'currency' => 'USD']
+            'payment' => ['price' => 0, 'currency' => 'USD'],
+            'email_allowlist' => [],
         ]
     ];
 
@@ -428,12 +495,18 @@ function update_wall_access(string $id, string $type, $value = null): bool {
     $found = false;
     foreach ($db['walls'] as &$wall) {
         if ($wall['id'] === $id) {
-            // Reset access control to a clean state
+            // Phase 3: preserve email_allowlist + (creator-curated) configurations across
+            // type changes. Switching from 'email_allowlist' to 'public' should not wipe
+            // the carefully-built email list.
+            $existing_allowlist = $wall['access_control']['email_allowlist'] ?? [];
+            $existing_payment = $wall['access_control']['payment'] ?? ['price' => 0, 'currency' => 'USD'];
+
             $wall['access_control'] = [
                 'type' => 'public',
                 'password' => ['hash' => null, 'salt' => null],
                 'codelist' => [],
-                'payment' => ['price' => 0, 'currency' => 'USD']
+                'payment' => $existing_payment,
+                'email_allowlist' => $existing_allowlist,
             ];
 
             if ($type === 'password' && !empty($value)) {
@@ -445,7 +518,6 @@ function update_wall_access(string $id, string $type, $value = null): bool {
                 $wall['access_control']['type'] = 'codelist';
                 $hashed_codes = [];
                 foreach ($value as $code) {
-                    // Trim and ensure code is not empty
                     $trimmed_code = trim($code);
                     if (!empty($trimmed_code)) {
                         $hashed_codes[] = hash_password($trimmed_code);
@@ -454,9 +526,24 @@ function update_wall_access(string $id, string $type, $value = null): bool {
                 $wall['access_control']['codelist'] = $hashed_codes;
             } elseif ($type === 'payment') {
                 $wall['access_control']['type'] = 'payment';
-                // Value for payment is the price
-                $wall['access_control']['payment']['price'] = (float)$value;
+                // Phase 4: $value may be a numeric price (legacy) OR an array with
+                // ['price' => float, 'providers' => ['stripe', 'paypal']] (new).
+                if (is_array($value)) {
+                    $wall['access_control']['payment']['price'] = (float)($value['price'] ?? 0);
+                    $providers = $value['providers'] ?? [];
+                    $providers = array_values(array_intersect(
+                        is_array($providers) ? $providers : [],
+                        ['stripe', 'paypal']
+                    ));
+                    $wall['access_control']['payment']['providers'] = $providers;
+                } else {
+                    $wall['access_control']['payment']['price'] = (float)$value;
+                }
                 $wall['access_control']['payment']['currency'] = 'USD';
+            } elseif ($type === 'email_allowlist') {
+                // The allowlist itself is managed via add_wall_email / remove_wall_email
+                // separately. Switching to this type just flips the gate.
+                $wall['access_control']['type'] = 'email_allowlist';
             }
 
             $found = true;
