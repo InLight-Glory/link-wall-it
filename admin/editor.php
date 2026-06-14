@@ -47,6 +47,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
     $action = $_POST['action'] ?? '';
 
+    // AJAX-only actions return JSON directly and skip the PRG redirect.
+    if ($action === 'reorder_links') {
+        // Hard-isolate this endpoint so any PHP notice/warning can't corrupt the JSON
+        // response. We capture and log them instead of inlining them in the body.
+        @ini_set('display_errors', '0');
+        while (ob_get_level() > 0) { ob_end_clean(); }
+        ob_start();
+
+        header('Content-Type: application/json');
+
+        $wall_id = $_POST['wall_id'] ?? '';
+        $link_ids = $_POST['link_ids'] ?? [];
+        if (!is_array($link_ids)) { $link_ids = []; }
+
+        $code = 200;
+        $payload = ['ok' => true];
+
+        try {
+            if ($wall_id === '' || empty($link_ids)) {
+                $code = 400;
+                $payload = ['error' => 'wall_id and link_ids required'];
+            } elseif (!reorder_links_for_wall($wall_id, $link_ids)) {
+                $code = 500;
+                $payload = ['error' => 'reorder failed'];
+            }
+        } catch (Throwable $t) {
+            error_log('[editor:reorder_links] ' . $t->getMessage() . ' at ' . $t->getFile() . ':' . $t->getLine());
+            $code = 500;
+            $payload = ['error' => 'server error'];
+        }
+
+        $garbage = ob_get_clean();
+        if ($garbage !== '') {
+            error_log('[editor:reorder_links] suppressed pre-JSON output: ' . substr($garbage, 0, 500));
+        }
+        http_response_code($code);
+        echo json_encode($payload);
+        exit;
+    }
+
     try {
         switch ($action) {
             // --- Buildings ---
@@ -281,11 +321,12 @@ function access_label($wall) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= theme_html_attr() ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editor &middot; Admin</title>
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf) ?>">
     <link rel="stylesheet" href="../assets/css/app.css">
 </head>
 <body>
@@ -449,7 +490,10 @@ function access_label($wall) {
                                                         // show a placeholder rather than ciphertext.
                                                         $display_title = $is_protected ? '[encrypted]' : $l['title'];
                                                     ?>
-                                                        <div class="tree__link-row">
+                                                        <div class="tree__link-row" draggable="true"
+                                                             data-link-id="<?= htmlspecialchars($l['id']) ?>"
+                                                             data-wall-id="<?= htmlspecialchars($w['id']) ?>">
+                                                            <span class="tree__drag-handle" title="Drag to reorder">&#x2630;</span>
                                                             <span class="tree__chevron tree__chevron--leaf">&middot;</span>
                                                             <span class="tree__icon">L</span>
                                                             <span class="tree__name tree__name--link"><?= htmlspecialchars($display_title) ?></span>
@@ -801,6 +845,82 @@ function access_label($wall) {
         document.querySelectorAll('#modal-access .tab').forEach(t => {
             t.addEventListener('click', () => activateTab(document.getElementById('modal-access'), t.dataset.tab));
         });
+
+        // ---- Drag-to-reorder links within a wall ----
+        (function() {
+            const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+            let dragSrc = null;
+
+            function clearMarkers(container) {
+                container.querySelectorAll('.tree__link-row').forEach(r => {
+                    r.classList.remove('drop-above', 'drop-below');
+                });
+            }
+
+            function postReorder(wallId, orderedIds) {
+                const fd = new FormData();
+                fd.append('csrf_token', CSRF);
+                fd.append('action', 'reorder_links');
+                fd.append('wall_id', wallId);
+                orderedIds.forEach(id => fd.append('link_ids[]', id));
+                return fetch('editor.php', { method: 'POST', body: fd })
+                    .then(r => r.ok ? r.json() : Promise.reject(r))
+                    .catch(err => {
+                        console.error('Reorder failed', err);
+                        alert('Could not save the new order. Refresh and try again.');
+                    });
+            }
+
+            document.querySelectorAll('.tree__link-row[draggable="true"]').forEach(row => {
+                row.addEventListener('dragstart', e => {
+                    dragSrc = row;
+                    row.classList.add('is-dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', row.dataset.linkId);
+                });
+                row.addEventListener('dragend', () => {
+                    row.classList.remove('is-dragging');
+                    if (row.parentNode) clearMarkers(row.parentNode);
+                    dragSrc = null;
+                });
+                row.addEventListener('dragover', e => {
+                    if (!dragSrc) return;
+                    // Same-wall only — don't allow cross-wall reordering.
+                    if (dragSrc.dataset.wallId !== row.dataset.wallId) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (row === dragSrc) return;
+                    const rect = row.getBoundingClientRect();
+                    const mid = rect.top + rect.height / 2;
+                    const above = e.clientY < mid;
+                    row.classList.toggle('drop-above', above);
+                    row.classList.toggle('drop-below', !above);
+                });
+                row.addEventListener('dragleave', () => {
+                    row.classList.remove('drop-above', 'drop-below');
+                });
+                row.addEventListener('drop', e => {
+                    if (!dragSrc || dragSrc === row) return;
+                    if (dragSrc.dataset.wallId !== row.dataset.wallId) return;
+                    e.preventDefault();
+                    const rect = row.getBoundingClientRect();
+                    const mid = rect.top + rect.height / 2;
+                    if (e.clientY < mid) {
+                        row.parentNode.insertBefore(dragSrc, row);
+                    } else {
+                        row.parentNode.insertBefore(dragSrc, row.nextSibling);
+                    }
+                    clearMarkers(row.parentNode);
+
+                    const wallId = row.dataset.wallId;
+                    const orderedIds = [...row.parentNode.querySelectorAll('.tree__link-row')]
+                        .filter(r => r.dataset.wallId === wallId)
+                        .map(r => r.dataset.linkId);
+                    postReorder(wallId, orderedIds);
+                });
+            });
+        })();
     </script>
+    <?= theme_picker_html() ?>
 </body>
 </html>

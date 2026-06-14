@@ -3,7 +3,9 @@
         "site_title": "Amazing iLG Links",
         "site_description": "Your personal link wall.",
         "stripe_publishable_key": "",
-        "stripe_secret_key": ""
+        "stripe_secret_key": "",
+        "short_url_rewrite": true,
+        "theme": "evening"
     },
     "users": [
         {
@@ -15,73 +17,81 @@
     "buildings": [
         {
             "id": "b_692209a4bcd83",
-            "name": "Arts"
-        },
-        {
-            "id": "b_692209c4397ee",
-            "name": "Crafts"
+            "name": "Projects"
         },
         {
             "id": "b_69745e3433261",
             "name": "Public"
+        },
+        {
+            "id": "b_69fe580dce5d1",
+            "name": "Media"
+        },
+        {
+            "id": "b_69fe83159c070",
+            "name": "Faith"
         }
     ],
     "sides": [
-        {
-            "id": "s_692209cf8a8a1",
-            "building_id": "b_692209c4397ee",
-            "name": "Handmaid Wall"
-        },
         {
             "id": "s_69745e3d13b12",
             "building_id": "b_69745e3433261",
             "name": "Writings"
         },
         {
-            "id": "s_69745e4b26a98",
-            "building_id": "b_69745e3433261",
-            "name": "Generated"
-        },
-        {
             "id": "s_69fda74a3ce02",
             "building_id": "b_69745e3433261",
             "name": "Day-Trading"
+        },
+        {
+            "id": "s_69fe5817c3508",
+            "building_id": "b_69fe580dce5d1",
+            "name": "Music"
+        },
+        {
+            "id": "s_69fe8321a5d9d",
+            "building_id": "b_69fe83159c070",
+            "name": "A"
+        },
+        {
+            "id": "s_69fe8328e564f",
+            "building_id": "b_69fe83159c070",
+            "name": "B"
+        },
+        {
+            "id": "s_69fe832e8ec68",
+            "building_id": "b_69fe83159c070",
+            "name": "C"
         }
     ],
     "walls": [
-        {
-            "id": "w_692209e0395a5",
-            "side_id": "s_692209cf8a8a1",
-            "name": "Made in Miami",
-            "access_control": {
-                "type": "public",
-                "password": {
-                    "hash": null,
-                    "salt": null
-                },
-                "codelist": [],
-                "payment": {
-                    "price": 0,
-                    "currency": "USD"
-                }
-            }
-        },
         {
             "id": "w_69745e57b2ecd",
             "side_id": "s_69745e3d13b12",
             "name": "Temp",
             "access_control": {
-                "type": "public",
+                "type": "codelist",
                 "password": {
                     "hash": null,
                     "salt": null
                 },
-                "codelist": [],
+                "codelist": [
+                    {
+                        "hash": "$argon2id$v=19$m=65536,t=4,p=1$Y2JqLkIvLmRTdDFUNS5ESw$\/\/S\/P4FX8j+SDynvYCvZHeW6jdcIfREYrYkYKcYLjIg",
+                        "salt": "f0bc168a5983912d551af788b0a1e883"
+                    },
+                    {
+                        "hash": "$argon2id$v=19$m=65536,t=4,p=1$QVBhM1hCWmtBRTZtR2dITQ$QyYndUQYCQomrrr1NkcTL7JBnvAm7pnGicGvUkNsiEI",
+                        "salt": "8192e158feaadff1e33625bd600b7cf0"
+                    }
+                ],
                 "payment": {
                     "price": 0,
                     "currency": "USD"
-                }
-            }
+                },
+                "email_allowlist": []
+            },
+            "slug": "zoo"
         },
         {
             "id": "w_69fda76492f10",
@@ -99,24 +109,106 @@
                     "currency": "USD"
                 },
                 "email_allowlist": []
+            },
+            "slug": "c4w"
+        },
+        {
+            "id": "w_69fe58995f8ff",
+            "side_id": "s_69fe5817c3508",
+            "name": "Albums",
+            "slug": "55b",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": [],
+                "payment": {
+                    "price": 0,
+                    "currency": "USD"
+                },
+                "email_allowlist": []
+            }
+        },
+        {
+            "id": "w_69fe83405c3ec",
+            "side_id": "s_69fe8321a5d9d",
+            "name": "Gospel",
+            "slug": "z47",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": [],
+                "payment": {
+                    "price": 0,
+                    "currency": "USD"
+                },
+                "email_allowlist": []
+            }
+        },
+        {
+            "id": "w_69fe838ccae44",
+            "side_id": "s_69fe832e8ec68",
+            "name": "Commune",
+            "slug": "kxg",
+            "access_control": {
+                "type": "public",
+                "password": {
+                    "hash": null,
+                    "salt": null
+                },
+                "codelist": [],
+                "payment": {
+                    "price": 0,
+                    "currency": "USD"
+                },
+                "email_allowlist": []
             }
         }
     ],
     "links": [
         {
-            "id": "l_69250ac229343",
-            "wall_id": "w_692209e0395a5",
-            "title": "The Google Search",
-            "url": "https:\/\/google.com",
+            "id": "l_69fda80e1024c",
+            "wall_id": "w_69fda76492f10",
+            "title": "Beginners Day Trading PDF",
+            "url": "http:\/\/inlightglory.com\/stockfinder\/trading-starter.pdf",
+            "description": "Great resource for absolute beginner.",
+            "image": null
+        },
+        {
+            "id": "l_69fe58b092c72",
+            "wall_id": "w_69fe58995f8ff",
+            "title": "(Spotify) Clean Forever 3",
+            "url": "https:\/\/open.spotify.com\/album\/0wUvZ5xJG6gsvvPQmur9yi?si=75I4VQQLTryi5cIN8UE0jQ",
+            "description": "",
+            "image": "assets\/images\/6a0a46c6609a43.16967608_Royal Fam-75small.png"
+        },
+        {
+            "id": "l_69fe8376a2227",
+            "wall_id": "w_69fe83405c3ec",
+            "title": "Gospel Videos",
+            "url": "https:\/\/inlightglory.com\/gospel\/",
+            "description": "YouTube Playlist.",
+            "image": null
+        },
+        {
+            "id": "l_69fe8399283b9",
+            "wall_id": "w_69fe838ccae44",
+            "title": "Church Finder",
+            "url": "https:\/\/inlightglory.com\/gospel\/fellowship\/",
             "description": "",
             "image": null
         },
         {
-            "id": "l_69250ad923a89",
-            "wall_id": "w_692209e0395a5",
-            "title": "The Duck Search",
-            "url": "https:\/\/duckduckgo.com",
-            "description": "",
+            "id": "l_6a04409ac745a",
+            "wall_id": "w_69745e57b2ecd",
+            "title": "Episode Poll",
+            "url": "https:\/\/docs.google.com\/forms\/d\/e\/1FAIpQLSfrgfuo8lBIfMgHrXSFGC9wsn6M_680BhQ2evwVGCmP_C0R3g\/viewform?usp=publish-editor",
+            "description": "Let me know which episode you want to read next.",
             "image": null
         },
         {
@@ -136,12 +228,36 @@
             "image": null
         },
         {
-            "id": "l_69fda80e1024c",
-            "wall_id": "w_69fda76492f10",
-            "title": "Beginners Day Trading PDF",
-            "url": "http:\/\/inlightglory.com\/stockfinder\/trading-starter.pdf",
-            "description": "Great resource for absolute beginner.",
+            "id": "l_6a04291b2b5d0",
+            "wall_id": "w_69745e57b2ecd",
+            "title": "Zoorastic Episode 3",
+            "url": "https:\/\/docs.google.com\/document\/d\/1oSi1GskdvrWv-KF_A1wZggLk6z8tAjnGr2jGfiAcUQ4\/edit?usp=sharing",
+            "description": "",
             "image": null
+        },
+        {
+            "id": "l_6a0a45dfceca6",
+            "wall_id": "w_69fe58995f8ff",
+            "title": "(Spotify) Seek",
+            "url": "https:\/\/open.spotify.com\/album\/7mZEpItuy5nZLvRJJ11lAA?si=2GLVQ38aQG6Ecjcx43MzLw",
+            "description": "",
+            "image": "assets\/images\/6a0a45dfce9eb5.37201867_Seek ALBUM cover-small.png"
+        },
+        {
+            "id": "l_6a0a48c7ab20e",
+            "wall_id": "w_69fe58995f8ff",
+            "title": "(Apple) Clean Forever 3",
+            "url": "https:\/\/music.apple.com\/us\/album\/clean-forever-3\/6768105679",
+            "description": "",
+            "image": "assets\/images\/6a0a48c7aae251.88075374_Royal Fam-75small.png"
+        },
+        {
+            "id": "l_6a0a492e7abe1",
+            "wall_id": "w_69fe58995f8ff",
+            "title": "(Apple) Seek",
+            "url": "https:\/\/music.apple.com\/us\/album\/seek\/6770213092",
+            "description": "",
+            "image": "assets\/images\/6a0a492e7a9243.28566076_Seek ALBUM cover-small.png"
         }
     ]
 }

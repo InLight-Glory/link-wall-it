@@ -15,7 +15,7 @@ $buildings = get_publicly_listable_buildings();
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= theme_html_attr() ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -50,5 +50,6 @@ $buildings = get_publicly_listable_buildings();
             Powered by Link-Wall-It
         </footer>
     </div>
+    <?= theme_picker_html() ?>
 </body>
 </html>

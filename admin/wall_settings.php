@@ -126,6 +126,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success_message = 'Short link updated.';
                 break;
 
+            case 'batch_move':
+            case 'batch_duplicate':
+                $link_ids = $_POST['link_ids'] ?? [];
+                $target   = trim($_POST['target_wall_id'] ?? '');
+                if (!is_array($link_ids) || empty($link_ids)) {
+                    throw new Exception('Select at least one link.');
+                }
+                if ($target === '')               { throw new Exception('Pick a target wall.'); }
+                if ($target === $wall_id)         { throw new Exception('Target wall must differ from the current wall.'); }
+                if (!get_wall($target))           { throw new Exception('Target wall not found.'); }
+
+                // Filter the submitted ids to only those that actually belong to this wall —
+                // protects against a tampered form trying to move links the user doesn't own.
+                $on_wall = array_column(
+                    array_filter(
+                        get_links_for_wall($wall_id),
+                        fn($l) => in_array($l['id'], $link_ids, true)
+                    ),
+                    'id'
+                );
+                if (empty($on_wall)) {
+                    throw new Exception('None of the selected links belong to this wall.');
+                }
+
+                if ($action === 'batch_move') {
+                    $n = move_links_to_wall($on_wall, $target);
+                    $success_message = $n . ' link' . ($n === 1 ? '' : 's') . ' moved.';
+                } else {
+                    $n = duplicate_links_to_wall($on_wall, $target);
+                    $success_message = $n . ' link' . ($n === 1 ? '' : 's') . ' duplicated.';
+                }
+                break;
+
             default:
                 throw new Exception('Unknown action.');
         }
@@ -160,16 +193,35 @@ if (empty($wall['slug'])) {
 // Refetch wall so we render current state.
 $wall = get_wall($wall_id);
 $active_tab = $_GET['tab'] ?? 'access';
-if (!in_array($active_tab, ['access', 'allowlist', 'invites'], true)) {
+if (!in_array($active_tab, ['access', 'allowlist', 'invites', 'links'], true)) {
     $active_tab = 'access';
 }
 $access_type = $wall['access_control']['type'] ?? 'public';
 $emails = list_wall_emails($wall_id);
 $invites = list_invites_for_wall($wall_id);
+$wall_links = get_links_for_wall($wall_id);
 $csrf = generate_csrf_token();
+
+// Build a hierarchical list of OTHER walls for the move/duplicate target dropdown.
+// Grouped by Building → Side for clarity. Excludes the current wall.
+$target_options = [];
+foreach (get_all_buildings() as $b) {
+    foreach (get_sides_for_building($b['id']) as $s) {
+        $walls_here = [];
+        foreach (get_walls_for_side($s['id']) as $w_other) {
+            if ($w_other['id'] === $wall_id) { continue; }
+            $walls_here[] = $w_other;
+        }
+        if (empty($walls_here)) { continue; }
+        $target_options[] = [
+            'label' => $b['name'] . ' / ' . $s['name'],
+            'walls' => $walls_here,
+        ];
+    }
+}
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= theme_html_attr() ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -253,6 +305,8 @@ $csrf = generate_csrf_token();
                    href="?wall_id=<?= htmlspecialchars($wall_id) ?>&tab=allowlist">Email allowlist <small>(<?= count($emails) ?>)</small></a>
                 <a class="tab <?= $active_tab === 'invites' ? 'is-active' : '' ?>"
                    href="?wall_id=<?= htmlspecialchars($wall_id) ?>&tab=invites">Invite links <small>(<?= count(array_filter($invites, fn($i) => empty($i['used_at']))) ?> active)</small></a>
+                <a class="tab <?= $active_tab === 'links' ? 'is-active' : '' ?>"
+                   href="?wall_id=<?= htmlspecialchars($wall_id) ?>&tab=links">Links <small>(<?= count($wall_links) ?>)</small></a>
             </div>
 
             <div style="padding: var(--space-5);">
@@ -403,6 +457,88 @@ $csrf = generate_csrf_token();
                     <?php endif; ?>
                 <?php endif; ?>
 
+                <!-- LINKS TAB (batch move / duplicate) -->
+                <?php if ($active_tab === 'links'): ?>
+                    <p style="color: var(--color-text-muted); font-size: var(--text-sm); margin-top: 0;">
+                        Select links to <strong>move</strong> them to another wall (relocate) or <strong>duplicate</strong> them (keep a copy here + place a copy on the target). To edit, delete, or reorder individual links, use the <a href="editor.php">tree editor</a>.
+                    </p>
+
+                    <?php if ($access_type === 'password'): ?>
+                        <div class="message message--warn">
+                            This wall is password-protected — link titles and descriptions are stored encrypted with the wall's password. Moving or duplicating them to a wall with a <em>different</em> access setup will leave the text unreadable on the target. You'll need to re-edit affected links there.
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (empty($wall_links)): ?>
+                        <div class="list__empty">This wall has no links yet.</div>
+                    <?php elseif (empty($target_options)): ?>
+                        <div class="list__empty">No other walls exist to move or duplicate links to. Create another wall first.</div>
+                    <?php else: ?>
+                        <form method="post" id="batch_links_form">
+                            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                            <input type="hidden" name="tab" value="links">
+
+                            <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; padding: var(--space-2) 0; margin-bottom: var(--space-3); border-bottom: 1px solid var(--color-border);">
+                                <label style="display: flex; align-items: center; gap: var(--space-1); font-weight: 400; font-size: var(--text-sm); margin-right: var(--space-3);">
+                                    <input type="checkbox" id="select_all_links" style="width: auto;"> Select all
+                                </label>
+
+                                <select name="target_wall_id" required style="max-width: 280px;">
+                                    <option value="">Target wall&hellip;</option>
+                                    <?php foreach ($target_options as $group): ?>
+                                        <optgroup label="<?= htmlspecialchars($group['label']) ?>">
+                                            <?php foreach ($group['walls'] as $w_other): ?>
+                                                <option value="<?= htmlspecialchars($w_other['id']) ?>"><?= htmlspecialchars($w_other['name']) ?></option>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endforeach; ?>
+                                </select>
+
+                                <button type="submit" name="action" value="batch_move" class="btn btn--secondary btn--sm"
+                                        onclick="return confirmBatch('move');">Move selected</button>
+                                <button type="submit" name="action" value="batch_duplicate" class="btn btn--secondary btn--sm"
+                                        onclick="return confirmBatch('duplicate');">Duplicate selected</button>
+                            </div>
+
+                            <?php
+                                $is_protected = $access_type === 'password';
+                                foreach ($wall_links as $l):
+                                    $display_title = $is_protected ? '[encrypted]' : $l['title'];
+                            ?>
+                                <label class="node" style="display: flex; align-items: center; gap: var(--space-2); cursor: pointer;">
+                                    <input type="checkbox" name="link_ids[]" value="<?= htmlspecialchars($l['id']) ?>" class="batch-link-cb" style="width: auto;">
+                                    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                                        <span class="node__name" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?= htmlspecialchars($display_title) ?></span>
+                                        <span style="font-size: var(--text-xs); color: var(--color-text-subtle); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?= htmlspecialchars($l['url']) ?></span>
+                                    </span>
+                                </label>
+                            <?php endforeach; ?>
+                        </form>
+
+                        <script>
+                            (function () {
+                                var selAll = document.getElementById('select_all_links');
+                                var cbs = document.querySelectorAll('.batch-link-cb');
+                                if (selAll) {
+                                    selAll.addEventListener('change', function () {
+                                        cbs.forEach(function (cb) { cb.checked = selAll.checked; });
+                                    });
+                                }
+                                window.confirmBatch = function (mode) {
+                                    var picked = 0;
+                                    cbs.forEach(function (cb) { if (cb.checked) picked++; });
+                                    if (picked === 0) {
+                                        alert('Select at least one link first.');
+                                        return false;
+                                    }
+                                    var verb = (mode === 'move' ? 'Move' : 'Duplicate');
+                                    return confirm(verb + ' ' + picked + ' link' + (picked === 1 ? '' : 's') + '?');
+                                };
+                            })();
+                        </script>
+                    <?php endif; ?>
+                <?php endif; ?>
+
                 <!-- INVITE LINKS TAB -->
                 <?php if ($active_tab === 'invites'): ?>
                     <p style="color: var(--color-text-muted); font-size: var(--text-sm); margin-top: 0;">
@@ -463,5 +599,6 @@ $csrf = generate_csrf_token();
             Public link: <a href="../wall.php?id=<?= htmlspecialchars($wall_id) ?>" target="_blank" rel="noopener noreferrer">view as visitor</a>
         </p>
     </div>
+    <?= theme_picker_html() ?>
 </body>
 </html>

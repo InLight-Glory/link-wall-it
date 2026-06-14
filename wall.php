@@ -181,7 +181,7 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= theme_html_attr() ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -336,5 +336,6 @@ $site_title = get_db()['settings']['site_title'] ?? 'Link-Wall-It';
         </main>
     </div>
     <script src="assets/js/sharing.js"></script>
+    <?= theme_picker_html() ?>
 </body>
 </html>

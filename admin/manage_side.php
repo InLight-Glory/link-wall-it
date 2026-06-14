@@ -70,7 +70,7 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= theme_html_attr() ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -153,5 +153,6 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
             <?php endif; ?>
         </section>
     </div>
+    <?= theme_picker_html() ?>
 </body>
 </html>

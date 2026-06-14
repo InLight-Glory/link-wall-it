@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_settings'])) {
         // Allow updating ANY of the known settings keys via POST. Missing keys retain old value.
         $known_keys = [
-            'site_title', 'site_description',
+            'site_title', 'site_description', 'theme',
             'stripe_publishable_key', 'stripe_secret_key', 'stripe_webhook_secret',
             'paypal_client_id', 'paypal_client_secret', 'paypal_webhook_id',
             'payment_mode',
@@ -28,6 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (isset($new_settings['payment_mode']) && !in_array($new_settings['payment_mode'], ['test', 'live'], true)) {
             $new_settings['payment_mode'] = 'test';
+        }
+        if (isset($new_settings['theme']) && !in_array($new_settings['theme'], ['default', 'dark', 'evening'], true)) {
+            $new_settings['theme'] = 'default';
         }
 
         // Boolean toggles (form sends '1' if checked, missing if unchecked)
@@ -69,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= theme_html_attr() ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -103,6 +106,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="field">
                     <label for="site_description">Site description</label>
                     <textarea name="site_description" id="site_description" rows="2"><?= htmlspecialchars($settings['site_description'] ?? '') ?></textarea>
+                </div>
+
+                <?php $current_theme_value = $settings['theme'] ?? 'default'; ?>
+                <div class="field">
+                    <label for="theme">Theme</label>
+                    <select name="theme" id="theme">
+                        <option value="default" <?= $current_theme_value === 'default' ? 'selected' : '' ?>>Default &mdash; light, neutral</option>
+                        <option value="dark"    <?= $current_theme_value === 'dark'    ? 'selected' : '' ?>>Dark &mdash; deep navy</option>
+                        <option value="evening" <?= $current_theme_value === 'evening' ? 'selected' : '' ?>>Evening &mdash; warm amber, low blue light</option>
+                    </select>
+                    <small>Applies site-wide (admin and public pages).</small>
                 </div>
 
                 <div class="field">
@@ -205,5 +219,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
         </section>
     </div>
+    <?= theme_picker_html() ?>
 </body>
 </html>
