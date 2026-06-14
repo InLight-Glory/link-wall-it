@@ -8,6 +8,11 @@ config.php
 # Data
 data/database.json
 data/installed.lock
+data/install_secret
+data/app_secret.key
+
+# Misc
+tree.txt
 
 # Logs and Testing
 php_server.log

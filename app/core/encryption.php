@@ -1,16 +1,34 @@
 <?php
 
 /**
- * !!! SECURITY WARNING !!!
+ * Encryption helpers — password hashing, AES-256-GCM, code-list verification.
  *
- * In a real-world production environment, this secret key should NOT be stored in the source code.
- * It should be loaded from a secure, non-version-controlled location like an environment variable
- * or a configuration file outside the web root (e.g., /etc/link-wall-it/config.php).
- *
- * For the purposes of this self-contained application, it is defined here.
- * If you change this key, all previously encrypted data will be unreadable.
+ * APP_SECRET_KEY is loaded from data/app_secret.key (gitignored).
+ * On first run the legacy default is written there so existing encrypted data
+ * stays readable.  New installs should replace the key file content with a
+ * unique 64-hex-char secret BEFORE creating any encrypted walls.
  */
-define('APP_SECRET_KEY', 'e9a3f2c8b1d4e7f6a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0');
+
+// --- APP_SECRET_KEY bootstrap ------------------------------------------------
+$_app_secret_file = __DIR__ . '/../../data/app_secret.key';
+$_app_secret_legacy = 'e9a3f2c8b1d4e7f6a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0';
+
+if (file_exists($_app_secret_file)) {
+    $_app_secret_raw = trim(file_get_contents($_app_secret_file));
+    if (preg_match('/^[a-f0-9]{64}$/i', $_app_secret_raw)) {
+        define('APP_SECRET_KEY', $_app_secret_raw);
+    } else {
+        error_log('[Engine:encryption] Malformed app_secret.key — falling back to legacy key.');
+        define('APP_SECRET_KEY', $_app_secret_legacy);
+    }
+} else {
+    // First run: persist the legacy key so the file exists going forward.
+    // Operators should replace this with a unique value for new installs.
+    define('APP_SECRET_KEY', $_app_secret_legacy);
+    @file_put_contents($_app_secret_file, $_app_secret_legacy . "\n", LOCK_EX);
+    @chmod($_app_secret_file, 0600);
+}
+unset($_app_secret_file, $_app_secret_raw, $_app_secret_legacy);
 
 /**
  * Hashes a password using a strong algorithm.
