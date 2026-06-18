@@ -4,3 +4,24 @@ config.php
 
 # Dependencies
 /vendor/
+
+# Data
+data/database.json
+data/installed.lock
+data/install_secret
+data/app_secret.key
+
+# Misc
+tree.txt
+
+# Logs and Testing
+php_server.log
+verification/
+
+# Security: Exclude sensitive and AI prompt files
+.BuildDocs/
+scripts/reset_admin_password.php
+*.md
+*.agent.md
+*.prompt.md
+*.instructions.md

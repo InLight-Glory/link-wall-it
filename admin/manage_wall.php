@@ -4,6 +4,8 @@ ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../app/core/functions.php';
 
+require_login();
+
 // --- Authentication and Initialization ---
 $wall_id = $_GET['wall_id'] ?? null;
 if (!$wall_id) {
@@ -69,6 +71,7 @@ function handle_image_upload($file_input_name) {
 
 // --- Form Handling ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf();
 
     // Handle 'Update Access Control'
     if (isset($_POST['update_access'])) {
@@ -89,6 +92,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $access_value = array_filter(array_map('trim', $access_value));
             if (empty($access_value)) {
                 $access_type = 'public';
+            }
+        } elseif ($access_type === 'payment') {
+            $access_value = $_POST['access_price'] ?? 0;
+            if (empty($access_value) || floatval($access_value) <= 0) {
+                // If price is not set or invalid, maybe revert to public or show error?
+                // For simplicity, let's assume it's allowed but usually price should be > 0
+                $access_value = 0;
             }
         }
 
@@ -211,15 +221,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-}
 
-// Handle 'Delete Link'
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    if (delete_link($_GET['id'])) {
-        header('Location: manage_wall.php?wall_id=' . $wall_id . '&delete=success');
-        exit;
-    } else {
-        $error_message = 'Failed to delete link.';
+    // Handle 'Delete Link'
+    elseif (isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['id'])) {
+        if (delete_link($_POST['id'])) {
+            header('Location: manage_wall.php?wall_id=' . $wall_id . '&delete=success');
+            exit;
+        } else {
+            $error_message = 'Failed to delete link.';
+        }
     }
 }
 
@@ -235,164 +245,211 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= theme_html_attr() ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Links for <?= htmlspecialchars($wall['name']) ?></title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
-        .container { max-width: 800px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1, h2 { color: #2c3e50; }
-        .breadcrumb { margin-bottom: 20px; }
-        .breadcrumb a { color: #3498db; text-decoration: none; }
-        hr { border: 0; height: 1px; background: #ddd; margin: 20px 0; }
-        form { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        input[type="text"], input[type="url"], textarea { width: 95%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; }
-        button { padding: 10px 15px; border: none; background-color: #3498db; color: white; border-radius: 4px; cursor: pointer; }
-        button[type="submit"] { background-color: #2ecc71; }
-        .item-list { list-style: none; padding: 0; }
-        .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-        .item:last-child { border-bottom: none; }
-        .item-actions a { text-decoration: none; color: #3498db; margin-left: 15px; }
-        .item-actions a.delete { color: #e74c3c; }
-        .message { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-        .success { background-color: #e8f5e9; color: #2e7d32; }
-        .error { background-color: #ffebee; color: #c62828; }
-    </style>
+    <title><?= htmlspecialchars($wall['name']) ?> &middot; Links</title>
+    <link rel="stylesheet" href="../assets/css/app.css">
 </head>
 <body>
-    <div class="container">
-        <p class="breadcrumb">
-            <a href="index.php">Admin Home</a> &raquo;
+    <div class="container container--wide">
+        <header class="app-header">
+            <h1><?= htmlspecialchars($wall['name']) ?></h1>
+            <nav class="app-header__nav">
+                <a href="editor.php">Editor</a>
+                <a href="index.php">Buildings</a>
+                <a href="settings.php">Settings</a>
+                <a href="logout.php" class="danger">Sign out</a>
+            </nav>
+        </header>
+
+        <nav class="breadcrumb">
+            <a href="index.php">Buildings</a>
             <?php if ($building): ?>
-                <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a> &raquo;
+                <span class="breadcrumb__sep">/</span>
+                <a href="manage_building.php?building_id=<?= htmlspecialchars($building['id']) ?>"><?= htmlspecialchars($building['name']) ?></a>
             <?php endif; ?>
             <?php if ($side): ?>
-                <a href="manage_side.php?side_id=<?= htmlspecialchars($side['id']) ?>"><?= htmlspecialchars($side['name']) ?></a> &raquo;
+                <span class="breadcrumb__sep">/</span>
+                <a href="manage_side.php?side_id=<?= htmlspecialchars($side['id']) ?>"><?= htmlspecialchars($side['name']) ?></a>
             <?php endif; ?>
-            Manage Wall
-        </p>
-        <h1>Manage Links for "<?= htmlspecialchars($wall['name']) ?>"</h1>
+            <span class="breadcrumb__sep">/</span>
+            <?= htmlspecialchars($wall['name']) ?>
+        </nav>
 
-        <?php if ($success_message): ?><div class="message success"><?= htmlspecialchars($success_message) ?></div><?php endif; ?>
-        <?php if ($error_message): ?><div class="message error"><?= htmlspecialchars($error_message) ?></div><?php endif; ?>
+        <?php if ($success_message): ?><div class="message message--success"><?= htmlspecialchars($success_message) ?></div><?php endif; ?>
+        <?php if ($error_message): ?><div class="message message--error"><?= htmlspecialchars($error_message) ?></div><?php endif; ?>
 
-        <hr>
-        <h2>Wall Security</h2>
-        <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post">
-            <label for="access_type">Access Type:</label>
-            <select name="access_type" id="access_type" onchange="toggleAccessInputs()">
-                <option value="public" <?= $wall['access_control']['type'] === 'public' ? 'selected' : '' ?>>Public</option>
-                <option value="password" <?= $wall['access_control']['type'] === 'password' ? 'selected' : '' ?>>Password / Code</option>
-                <option value="codelist" <?= $wall['access_control']['type'] === 'codelist' ? 'selected' : '' ?>>Codelist (Multiple Codes)</option>
-            </select>
-
-            <div id="password_input" style="display: none; margin-top: 10px;">
-                <label for="access_password">Password or Code (leave empty to remove):</label>
-                <input type="password" name="access_password" id="access_password" placeholder="Enter password">
+        <section class="section">
+            <div class="section__heading">
+                <h2>Access</h2>
+                <small>Current: <?= htmlspecialchars($wall['access_control']['type']) ?></small>
             </div>
+            <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                <div class="field">
+                    <label for="access_type">Access type</label>
+                    <select name="access_type" id="access_type" onchange="toggleAccessInputs()">
+                        <option value="public" <?= $wall['access_control']['type'] === 'public' ? 'selected' : '' ?>>Public</option>
+                        <option value="password" <?= $wall['access_control']['type'] === 'password' ? 'selected' : '' ?>>Password</option>
+                        <option value="codelist" <?= $wall['access_control']['type'] === 'codelist' ? 'selected' : '' ?>>Codelist</option>
+                        <option value="payment" <?= $wall['access_control']['type'] === 'payment' ? 'selected' : '' ?>>Payment (Stripe)</option>
+                    </select>
+                </div>
 
-            <div id="codelist_input" style="display: none; margin-top: 10px;">
-                <label for="access_codelist">Access Codes (one per line or comma-separated):</label>
-                <textarea name="access_codelist" id="access_codelist" rows="5" placeholder="code1, code2, code3"><?php
-                    if ($wall['access_control']['type'] === 'codelist') {
-                        // This is tricky as we can't show the hashed codes. We leave it blank for user to enter new ones.
-                        // A better UI might show "X codes set". For now, this is fine.
-                    }
-                ?></textarea>
-            </div>
+                <div id="password_input" class="field" style="display: none;">
+                    <label for="access_password">Password (leave empty to remove)</label>
+                    <input type="password" name="access_password" id="access_password" placeholder="New password">
+                </div>
 
-            <button type="submit" name="update_access" style="margin-top: 10px;">Update Access Control</button>
-        </form>
+                <div id="codelist_input" class="field" style="display: none;">
+                    <label for="access_codelist">Codes (one per line or comma-separated)</label>
+                    <textarea name="access_codelist" id="access_codelist" rows="4" placeholder="code1, code2, code3"></textarea>
+                </div>
 
-        <script>
-            function toggleAccessInputs() {
-                var type = document.getElementById('access_type').value;
-                document.getElementById('password_input').style.display = (type === 'password') ? 'block' : 'none';
-                document.getElementById('codelist_input').style.display = (type === 'codelist') ? 'block' : 'none';
-            }
-            // Run on page load to set initial state
-            toggleAccessInputs();
-        </script>
-        <hr>
+                <div id="payment_input" class="field" style="display: none;">
+                    <label for="access_price">Price (USD)</label>
+                    <input type="number" name="access_price" id="access_price" step="0.01" min="0.50" placeholder="5.00" value="<?= htmlspecialchars($wall['access_control']['payment']['price'] ?? '') ?>">
+                </div>
 
-        <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data">
-            <h2>Create New Link</h2>
-            <?php if ($wall['access_control']['type'] === 'password'): ?>
-                <p style="color: #c0392b; font-weight: bold;">This wall is password protected. You must enter the wall's password to encrypt and save new links.</p>
-                <input type="password" name="wall_password_for_encryption" placeholder="Enter Wall Password" required>
-            <?php endif; ?>
-            <input type="text" name="link_title" placeholder="Link Title" required>
-            <input type="url" name="link_url" placeholder="https://example.com" required>
-            <textarea name="link_description" placeholder="Optional Description"></textarea>
-            <label for="link_image">Image (Optional, max 500KB):</label>
-            <input type="file" name="link_image" id="link_image">
-            <button type="submit" name="create_link">Create Link</button>
-        </form>
+                <button type="submit" name="update_access" class="btn">Update access</button>
+            </form>
 
-        <hr>
+            <script>
+                function toggleAccessInputs() {
+                    var type = document.getElementById('access_type').value;
+                    document.getElementById('password_input').style.display = (type === 'password') ? 'block' : 'none';
+                    document.getElementById('codelist_input').style.display = (type === 'codelist') ? 'block' : 'none';
+                    document.getElementById('payment_input').style.display  = (type === 'payment')  ? 'block' : 'none';
+                }
+                toggleAccessInputs();
+            </script>
+        </section>
 
-        <h2>Existing Links</h2>
-        <div class="item-list">
-            <?php if (empty($links)): ?>
-                <p>No links found. Create one above!</p>
-            <?php else: ?>
-                <?php foreach ($links as $link): ?>
-                    <div class="item">
-                        <?php
-                        $is_editing = (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id']) && $_GET['id'] === $link['id']);
-                        ?>
+        <section class="section">
+            <div class="section__heading"><h2>Add link</h2></div>
+            <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
 
-                        <?php if ($is_editing): ?>
-                            <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data" style="width: 100%;">
-                                <input type="hidden" name="link_id" value="<?= htmlspecialchars($link['id']) ?>">
-
-                                <?php if ($wall['access_control']['type'] === 'password'): ?>
-                                    <p style="color: #c0392b; font-weight: bold;">This wall is password protected. You must enter the wall's password to save changes.</p>
-                                    <input type="password" name="wall_password_for_encryption" placeholder="Enter Wall Password" required>
-                                <?php endif; ?>
-
-                                <input type="text" name="link_title" value="<?= htmlspecialchars($link['title']) ?>" required>
-                                <input type="url" name="link_url" value="<?= htmlspecialchars($link['url']) ?>" required>
-                                <textarea name="link_description"><?= htmlspecialchars($link['description']) ?></textarea>
-
-                                <label for="link_image_<?= htmlspecialchars($link['id']) ?>">New Image (Optional, max 500KB):</label>
-                                <input type="file" name="link_image" id="link_image_<?= htmlspecialchars($link['id']) ?>">
-
-                                <?php if (!empty($link['image'])): ?>
-                                    <div class="current-image">
-                                        <p>Current Image:</p>
-                                        <img src="../<?= htmlspecialchars($link['image']) ?>" alt="Current Image" style="max-width: 100px; max-height: 100px;">
-                                        <label>
-                                            <input type="checkbox" name="delete_image" value="1"> Delete current image
-                                        </label>
-                                    </div>
-                                <?php endif; ?>
-
-                                <button type="submit" name="update_link">Update</button>
-                                <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>">Cancel</a>
-                            </form>
-                        <?php else: ?>
-                            <span style="display: flex; align-items: center;">
-                                <?php if (!empty($link['image'])): ?>
-                                    <img src="../<?= htmlspecialchars($link['image']) ?>" alt="Link thumbnail" style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px; border-radius: 4px;">
-                                <?php endif; ?>
-                                <div>
-                                    <strong><a href="<?= htmlspecialchars($link['url']) ?>" target="_blank"><?= htmlspecialchars($link['title']) ?></a></strong>
-                                    <small>(<?= htmlspecialchars($link['url']) ?>)</small>
-                                    <p style="margin: 0;"><?= htmlspecialchars($link['description']) ?></p>
-                                </div>
-                            </span>
-                            <span class="item-actions">
-                                <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>&action=edit&id=<?= htmlspecialchars($link['id']) ?>">Edit</a>
-                                <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>&action=delete&id=<?= htmlspecialchars($link['id']) ?>" class="delete" onclick="return confirm('Are you sure?');">Delete</a>
-                            </span>
-                        <?php endif; ?>
+                <?php if ($wall['access_control']['type'] === 'password'): ?>
+                    <div class="message message--warn">This wall is password-protected. Enter the wall password to encrypt the link.</div>
+                    <div class="field">
+                        <label for="wall_password_for_encryption">Wall password</label>
+                        <input type="password" name="wall_password_for_encryption" id="wall_password_for_encryption" required>
                     </div>
-                <?php endforeach; ?>
+                <?php endif; ?>
+
+                <div class="field">
+                    <label for="link_title">Title</label>
+                    <input type="text" name="link_title" id="link_title" required>
+                </div>
+
+                <div class="field">
+                    <label for="link_url">URL</label>
+                    <input type="url" name="link_url" id="link_url" placeholder="https://example.com" required>
+                </div>
+
+                <div class="field">
+                    <label for="link_description">Description</label>
+                    <textarea name="link_description" id="link_description" rows="2"></textarea>
+                </div>
+
+                <div class="field">
+                    <label for="link_image">Image (max 500KB)</label>
+                    <input type="file" name="link_image" id="link_image">
+                </div>
+
+                <button type="submit" name="create_link" class="btn">Add link</button>
+            </form>
+        </section>
+
+        <section class="section">
+            <div class="section__heading"><h2>Links</h2></div>
+
+            <?php if (empty($links)): ?>
+                <div class="list__empty">No links yet. Add one above.</div>
+            <?php else: ?>
+                <div>
+                    <?php foreach ($links as $link): ?>
+                        <?php $is_editing = (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id']) && $_GET['id'] === $link['id']); ?>
+                        <?php if ($is_editing): ?>
+                            <div class="card">
+                                <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" enctype="multipart/form-data">
+                                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                    <input type="hidden" name="link_id" value="<?= htmlspecialchars($link['id']) ?>">
+
+                                    <?php if ($wall['access_control']['type'] === 'password'): ?>
+                                        <div class="message message--warn">Enter the wall password to save changes.</div>
+                                        <div class="field">
+                                            <label>Wall password</label>
+                                            <input type="password" name="wall_password_for_encryption" required>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <div class="field">
+                                        <label>Title</label>
+                                        <input type="text" name="link_title" value="<?= htmlspecialchars($link['title']) ?>" required autofocus>
+                                    </div>
+                                    <div class="field">
+                                        <label>URL</label>
+                                        <input type="url" name="link_url" value="<?= htmlspecialchars($link['url']) ?>" required>
+                                    </div>
+                                    <div class="field">
+                                        <label>Description</label>
+                                        <textarea name="link_description" rows="2"><?= htmlspecialchars($link['description']) ?></textarea>
+                                    </div>
+
+                                    <div class="field">
+                                        <label>New image (max 500KB)</label>
+                                        <input type="file" name="link_image">
+                                    </div>
+
+                                    <?php if (!empty($link['image'])): ?>
+                                        <div class="field">
+                                            <label>Current image</label>
+                                            <img src="../<?= htmlspecialchars($link['image']) ?>" alt="" style="width: 64px; height: 64px; object-fit: cover; border-radius: var(--radius-sm); display: block; margin-bottom: var(--space-2);">
+                                            <label style="font-weight: 400; color: var(--color-text-muted); font-size: var(--text-sm);">
+                                                <input type="checkbox" name="delete_image" value="1" style="width: auto; margin-right: var(--space-1);"> Remove current image
+                                            </label>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <div class="row">
+                                        <button type="submit" name="update_link" class="btn">Save</button>
+                                        <a href="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" class="btn btn--ghost">Cancel</a>
+                                    </div>
+                                </form>
+                            </div>
+                        <?php else: ?>
+                            <div class="link-row" style="cursor: default;">
+                                <?php if (!empty($link['image'])): ?>
+                                    <span class="link-row__thumb"><img src="../<?= htmlspecialchars($link['image']) ?>" alt=""></span>
+                                <?php endif; ?>
+                                <span class="link-row__body">
+                                    <span class="link-row__title"><?= htmlspecialchars($link['title']) ?></span>
+                                    <span class="link-row__url"><?= htmlspecialchars($link['url']) ?></span>
+                                    <?php if (!empty($link['description'])): ?>
+                                        <span class="link-row__desc"><?= htmlspecialchars($link['description']) ?></span>
+                                    <?php endif; ?>
+                                </span>
+                                <span class="link-row__actions">
+                                    <a class="btn btn--secondary btn--sm" href="<?= htmlspecialchars($link['url']) ?>" target="_blank" rel="noopener noreferrer">Open</a>
+                                    <a class="btn btn--ghost btn--sm" href="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>&action=edit&id=<?= htmlspecialchars($link['id']) ?>">Edit</a>
+                                    <form action="manage_wall.php?wall_id=<?= htmlspecialchars($wall_id) ?>" method="post" style="display:inline;" onsubmit="return confirm('Delete this link?');">
+                                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="<?= htmlspecialchars($link['id']) ?>">
+                                        <button type="submit" class="btn btn--ghost btn--sm" style="color: var(--color-danger);">Delete</button>
+                                    </form>
+                                </span>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
-        </div>
+        </section>
     </div>
+    <?= theme_picker_html() ?>
 </body>
 </html>

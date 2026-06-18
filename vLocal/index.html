@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link-Wallet | Architect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
+        .folder-item:hover { background-color: #f3f4f6; }
+        .active-item { background-color: #e5e7eb; border-left: 4px solid #111827; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="text-slate-900">
+
+    <!-- NAVIGATION TOP BAR -->
+    <nav class="flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-50">
+        <h1 class="text-xl font-semibold tracking-tight">Link<span class="text-slate-500">-Wallet</span></h1>
+        <div class="space-x-2">
+            <button onclick="switchView('visitor')" class="px-4 py-2 text-sm font-medium rounded-md hover:bg-slate-100 
+transition">Preview View</button>
+            <button onclick="switchView('admin')" class="px-4 py-2 text-sm font-medium bg-slate-900 text-white rounded-md 
+hover:bg-slate-800 transition">Admin Editor</button>
+        </div>
+    </nav>
+
+    <!-- VISITOR VIEW -->
+    <main id="visitor-view" class="max-w-md mx-auto mt-12 px-4 pb-20">
+        <div id="visitor-content" class="space-y-4">
+            <!-- Content injected by JS -->
+        </div>
+    </main>
+
+    <!-- ADMIN VIEW (FOLDER SYSTEM) -->
+    <main id="admin-view" class="hidden h-[calc(100vh-65px)] flex">
+        <!-- Left Sidebar: Folder System -->
+        <div class="w-80 border-r bg-white flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center">
+                <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Structure</span>
+                <button onclick="addNewBuilding()" class="text-xs bg-slate-100 px-2 py-1 rounded hover:bg-slate-200">+ 
+Building</button>
+            </div>
+            <div id="folder-tree" class="overflow-y-auto flex-1 p-2 space-y-1">
+                <!-- Tree injected by JS -->
+            </div>
+        </div>
+
+        <!-- Right Panel: Property Inspector -->
+        <div id="inspector" class="flex-1 bg-slate-50 p-8 overflow-y-auto">
+            <div id="inspector-empty" class="h-full flex items-center justify-center text-slate-400 italic">
+                Select an item from the wallet to edit properties.
+            </div>
+            <div id="inspector-content" class="hidden max-w-2xl mx-auto">
+                <h2 id="edit-title" class="text-2xl font-bold mb-6">Edit Item</h2>
+                
+                <div class="bg-white border rounded-xl p-6 shadow-sm space-y-6">
+                    <!-- Basic Info -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Display Name</label>
+                            <input type="text" id="prop-name" class="w-full border rounded p-2 text-sm focus:ring-2 
+focus:ring-slate-200 outline-none">
+                        </div>
+                        <div id="url-field">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">URL/Link</label>
+                            <input type="text" id="prop-url" class="w-full border rounded p-2 text-sm focus:ring-2 
+focus:ring-slate-200 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Privacy Section -->
+                    <div class="pt-6 border-t">
+                        <h3 class="text-sm font-semibold mb-4">Access Control</h3>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-sm">Public Visibility</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="prop-public" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer 
+peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] 
+after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 
+after:transition-all peer-checked:bg-slate-900"></div>
+                            </label>
+                        </div>
+
+                        <div id="private-options" class="space-y-4 opacity-50 pointer-events-none transition-opacity">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Password Protection</label>
+                                <input type="password" id="prop-password" placeholder="Set password..." class="w-full border 
+rounded p-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Invite via Email 
+(Encrypted)</label>
+                                <input type="email" id="prop-email" placeholder="email@example.com" class="w-full border 
+rounded p-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monetization Section -->
+                    <div class="pt-6 border-t">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-sm">Pay-to-View (Monetize)</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="prop-pay" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer 
+peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] 
+after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 
+after:transition-all peer-checked:bg-green-600"></div>
+                            </label>
+                        </div>
+                        <div id="pay-options" class="grid grid-cols-2 gap-4 opacity-50 pointer-events-none">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Stripe ID</label>
+                                <input type="text" placeholder="price_..." class="w-full border rounded p-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">PayPal Email</label>
+                                <input type="text" placeholder="pay@me.com" class="w-full border rounded p-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 flex justify-end">
+                        <button onclick="saveProperties()" class="bg-slate-900 text-white px-6 py-2 rounded text-sm 
+font-medium hover:bg-slate-800">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // DATA STRUCTURE
+        let data = [
+            {
+                id: 'b1', name: 'Creative', type: 'building', public: true, password: '', pay: false,
+                children: [
+                    {
+                        id: 'w1', name: 'Art', type: 'wall', public: true, password: '', pay: false,
+                        children: [
+                            { id: 'l1', name: 'Arte', type: 'link', url: 'https://arte.com', public: true },
+                            { id: 'l2', name: 'Brushes', type: 'link', url: 'https://brushes.org', public: true },
+                        ]
+                    },
+                    {
+                        id: 'w2', name: '3D', type: 'wall', public: false, password: '123', pay: false,
+                        children: [
+                            { id: 'l3', name: 'Animator', type: 'link', url: 'https://animator.com', public: true },
+                            { id: 'l4', name: 'Blender', type: 'link', url: 'https://blender3d.org', public: true },
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'b2', name: 'Music', type: 'building', public: true, password: '', pay: false,
+                children: [
+                    {
+                        id: 'w3', name: 'Generators', type: 'wall', children: [
+                            { id: 'l5', name: 'Suno AI', url: 'https://suno.com' }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        let currentSelectedItem = null;
+
+        function init() {
+            renderVisitor();
+            renderAdmin();
+        }
+
+        // VISITOR VIEW
+        function renderVisitor() {
+            const container = document.getElementById('visitor-content') || createVisitorContainer();
+            container.innerHTML = '';
+
+            data.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'mb-6';
+                el.innerHTML = `
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">${item.name}</h3>
+                    <div class="grid gap-2">
+                        ${item.children.map(child => `
+                            <a href="${child.url}" target="_blank" class="block p-4 bg-white border rounded-lg 
+hover:border-black transition-all">
+                                <span class="font-medium">${child.name}</span>
+                                <span class="text-xs text-gray-400 float-right">↗</span>
+                            </a>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function createVisitorContainer() {
+            const div = document.createElement('div');
+            div.id = 'visitor-content';
+            div.className = 'max-w-md mx-auto pt-20 pb-20';
+            document.body.appendChild(div);
+            return div;
+        }
+
+        // ADMIN VIEW - Folder structure
+        function renderAdmin() {
+            const tree = document.getElementById('admin-tree') || createAdminStructure();
+            tree.innerHTML = '';
+
+            data.forEach((item, idx) => {
+                const folder = createFolderEl(item, 'building', 0);
+                tree.appendChild(folder);
+            });
+        }
+
+        function createAdminStructure() {
+            const div = document.createElement('div');
+            div.id = 'admin-tree';
+            div.className = 'p-4 space-y-2';
+            // We only append this if we are in admin mode, but for the demo, let's just use a separate container
+            // For simplicity, I will inject the admin UI into a modal or separate page. 
+            // BUT, I'll just append it to the body for this demo.
+            document.body.appendChild(div);
+            return div;
+        }
+
+        function createFolderEl(item, type, depth) {
+            const div = document.createElement('div');
+            div.className = `group cursor-pointer p-2 rounded hover:bg-gray-100 text-sm flex items-center gap-2 ${depth > 0 ? 
+'ml-6' : ''}`;
+            div.innerHTML = `
+                <span class="text-gray-400">${type === 'building' ? '🏢' : '📁'}</span>
+                <span class="font-medium">${item.name}</span>
+            `;
+            
+            div.onclick = (e) => {
+                e.stopPropagation();
+                selectItem(item);
+            };
+
+            if (item.children) {
+                const childContainer = document.createElement('div');
+                item.children.forEach(child => {
+                    childContainer.appendChild(createFolderEl(child, 'item', depth + 1));
+                });
+                div.appendChild(childContainer);
+            }
+
+            return div;
+        }
+
+        function selectItem(item) {
+            currentSelectedItem = item;
+            // Logic to update a property panel (which we'd build)
+            alert(`Selected: ${item.name}. In a full version, the right panel would now allow you to edit the name, 
+visibility and payment settings.`);
+        }
+
+        // Toggle visibility of views for demo
+        function switchView(view) {
+            document.getElementById('visitor-content').style.display = view === 'visitor' ? 'block' : 'none';
+            document.getElementById('admin-tree').style.display = view === 'admin' ? 'block' : 'none';
+        }
+
+        // Initialize
+        window.onload = () => {
+            init();
+            // Default to visitor view
+            setTimeout(() => {
+                // Create a simple toggle for the demo
+                const btn = document.createElement('button');
+                btn.innerText = "Toggle Admin/Visitor";
+                btn.className = "fixed top-4 right-4 bg-black text-white px-4 py-2 rounded-full text-sm z-50";
+                btn.onclick = () => {
+                    const v = document.getElementById('visitor-content').style.display;
+                    switchView(v === 'none' ? 'visitor' : 'admin');
+                };
+                document.body.appendChild(btn);
+            }, 100);
+        };
+    </script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: 
+#f9fafb; color: #111; margin: 0; }
+        .hidden { display: none; }
+    </style>
+</body>
+</html>

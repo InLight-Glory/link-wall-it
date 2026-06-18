@@ -4,6 +4,8 @@ ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../app/core/functions.php';
 
+require_login();
+
 // --- Authentication and Initialization ---
 $building_id = $_GET['building_id'] ?? null;
 if (!$building_id) {
@@ -22,6 +24,8 @@ $success_message = '';
 
 // --- Form Handling ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf();
+
     // Handle 'Create Side'
     if (isset($_POST['create_side']) && !empty($_POST['side_name'])) {
         $result = create_side($building_id, $_POST['side_name']);
@@ -40,15 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error_message = 'Failed to update side.';
         }
     }
-}
 
-// Handle 'Delete Side'
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    if (delete_side($_GET['id'])) {
-        header('Location: manage_building.php?building_id=' . $building_id . '&delete=success');
-        exit;
-    } else {
-        $error_message = 'Failed to delete side.';
+    // Handle 'Delete Side'
+    elseif (isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['id'])) {
+        if (delete_side($_POST['id'])) {
+            header('Location: manage_building.php?building_id=' . $building_id . '&delete=success');
+            exit;
+        } else {
+            $error_message = 'Failed to delete side.';
+        }
     }
 }
 
@@ -64,93 +68,94 @@ if (isset($_GET['delete']) && $_GET['delete'] == 'success') {
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= theme_html_attr() ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Sides for <?= htmlspecialchars($building['name']) ?></title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
-        .container { max-width: 800px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1, h2 { color: #2c3e50; }
-        .breadcrumb { margin-bottom: 20px; }
-        .breadcrumb a { color: #3498db; text-decoration: none; }
-        hr { border: 0; height: 1px; background: #ddd; margin: 20px 0; }
-        form { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        input[type="text"] { width: calc(100% - 110px); padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 15px; border: none; background-color: #3498db; color: white; border-radius: 4px; cursor: pointer; }
-        button[type="submit"] { background-color: #2ecc71; }
-        .item-list { list-style: none; padding: 0; }
-        .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-        .item:last-child { border-bottom: none; }
-        .item-actions a { text-decoration: none; color: #3498db; margin-left: 15px; }
-        .item-actions a.delete { color: #e74c3c; }
-        .message { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-        .success { background-color: #e8f5e9; color: #2e7d32; }
-        .error { background-color: #ffebee; color: #c62828; }
-        .disabled { background-color: #bdc3c7; cursor: not-allowed; }
-    </style>
+    <title><?= htmlspecialchars($building['name']) ?> &middot; Sides</title>
+    <link rel="stylesheet" href="../assets/css/app.css">
 </head>
 <body>
     <div class="container">
-        <p class="breadcrumb"><a href="index.php">Admin Home</a> &raquo; Manage Building</p>
-        <h1>Manage Sides for "<?= htmlspecialchars($building['name']) ?>"</h1>
+        <header class="app-header">
+            <h1><?= htmlspecialchars($building['name']) ?></h1>
+            <nav class="app-header__nav">
+                <a href="editor.php">Editor</a>
+                <a href="index.php">Buildings</a>
+                <a href="settings.php">Settings</a>
+                <a href="logout.php" class="danger">Sign out</a>
+            </nav>
+        </header>
+
+        <nav class="breadcrumb">
+            <a href="index.php">Buildings</a>
+            <span class="breadcrumb__sep">/</span>
+            <?= htmlspecialchars($building['name']) ?>
+        </nav>
 
         <?php if ($success_message): ?>
-            <div class="message success"><?= htmlspecialchars($success_message) ?></div>
+            <div class="message message--success"><?= htmlspecialchars($success_message) ?></div>
         <?php endif; ?>
         <?php if ($error_message): ?>
-            <div class="message error"><?= htmlspecialchars($error_message) ?></div>
+            <div class="message message--error"><?= htmlspecialchars($error_message) ?></div>
         <?php endif; ?>
 
-        <!-- Form to create a new side -->
-        <?php if (count($sides) < 4): ?>
-            <form action="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>" method="post">
-                <h2>Create New Side</h2>
-                <input type="text" name="side_name" placeholder="Enter side name" required>
-                <button type="submit" name="create_side">Create Side</button>
-            </form>
-        <?php else: ?>
-            <h2>Create New Side</h2>
-            <p>This building already has the maximum of 4 sides.</p>
-        <?php endif; ?>
-
-        <hr>
-
-        <!-- List of existing sides -->
-        <h2>Existing Sides</h2>
-        <div class="item-list">
-            <?php if (empty($sides)): ?>
-                <p>No sides found. Create one above!</p>
+        <section class="section">
+            <div class="section__heading">
+                <h2>Create side</h2>
+                <small><?= count($sides) ?> / 4 sides used</small>
+            </div>
+            <?php if (count($sides) < 4): ?>
+                <form action="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>" method="post" class="field--inline">
+                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                    <input type="text" name="side_name" placeholder="Side name" required>
+                    <button type="submit" name="create_side" class="btn">Create</button>
+                </form>
             <?php else: ?>
-                <?php foreach ($sides as $side): ?>
-                    <div class="item">
-                        <?php
-                        $is_editing = (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id']) && $_GET['id'] === $side['id']);
-                        ?>
-
-                        <?php if ($is_editing): ?>
-                            <form action="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>" method="post" style="width: 100%;">
-                                <input type="hidden" name="side_id" value="<?= htmlspecialchars($side['id']) ?>">
-                                <input type="text" name="side_name" value="<?= htmlspecialchars($side['name']) ?>" required>
-                                <button type="submit" name="update_side">Update</button>
-                                <a href="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>">Cancel</a>
-                            </form>
-                        <?php else: ?>
-                            <span>
-                                <strong><?= htmlspecialchars($side['name']) ?></strong>
-                                <small>(ID: <?= htmlspecialchars($side['id']) ?>)</small>
-                            </span>
-                            <span class="item-actions">
-                                <a href="manage_side.php?side_id=<?= htmlspecialchars($side['id']) ?>">Manage Walls</a>
-                                <a href="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>&action=edit&id=<?= htmlspecialchars($side['id']) ?>">Edit Name</a>
-                                <a href="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>&action=delete&id=<?= htmlspecialchars($side['id']) ?>" class="delete" onclick="return confirm('Are you sure you want to delete this side and all its contents?');">Delete</a>
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                <?php endforeach; ?>
+                <p style="color: var(--color-text-muted); font-size: var(--text-sm); margin: 0;">This building has the maximum of 4 sides.</p>
             <?php endif; ?>
-        </div>
+        </section>
+
+        <section class="section">
+            <div class="section__heading"><h2>Sides</h2></div>
+
+            <?php if (empty($sides)): ?>
+                <div class="list__empty">No sides yet. Create one above.</div>
+            <?php else: ?>
+                <div>
+                    <?php foreach ($sides as $side): ?>
+                        <?php $is_editing = (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id']) && $_GET['id'] === $side['id']); ?>
+                        <div class="node">
+                            <?php if ($is_editing): ?>
+                                <form action="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>" method="post" class="field--inline" style="flex: 1;">
+                                    <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                    <input type="hidden" name="side_id" value="<?= htmlspecialchars($side['id']) ?>">
+                                    <input type="text" name="side_name" value="<?= htmlspecialchars($side['name']) ?>" required autofocus>
+                                    <button type="submit" name="update_side" class="btn btn--sm">Save</button>
+                                    <a href="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>" class="btn btn--ghost btn--sm">Cancel</a>
+                                </form>
+                            <?php else: ?>
+                                <span>
+                                    <span class="node__name"><?= htmlspecialchars($side['name']) ?></span>
+                                    <span class="node__id"><?= htmlspecialchars($side['id']) ?></span>
+                                </span>
+                                <span class="node__actions">
+                                    <a class="btn btn--secondary btn--sm" href="manage_side.php?side_id=<?= htmlspecialchars($side['id']) ?>">Walls</a>
+                                    <a class="btn btn--ghost btn--sm" href="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>&action=edit&id=<?= htmlspecialchars($side['id']) ?>">Rename</a>
+                                    <form action="manage_building.php?building_id=<?= htmlspecialchars($building_id) ?>" method="post" style="display:inline;" onsubmit="return confirm('Delete this side and all its contents?');">
+                                        <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="<?= htmlspecialchars($side['id']) ?>">
+                                        <button type="submit" class="btn btn--ghost btn--sm" style="color: var(--color-danger);">Delete</button>
+                                    </form>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
     </div>
+    <?= theme_picker_html() ?>
 </body>
 </html>
